@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/dist/
+
+# Backend
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log
+npm-debug.log*
+backend/*.log
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.tmp
+*.bak
