@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { HttpError } from '@/lib/httpClient';
 import { Alert } from '@/components/ui/Alert';
@@ -24,9 +24,11 @@ export function ConfirmationStatus({
 }: ConfirmationStatusProps) {
   const [status, setStatus] = useState<Status>(token ? 'loading' : 'error');
   const [message, setMessage] = useState<string>('El enlace no es valido o esta incompleto.');
+  const requested = useRef(false);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || requested.current) return;
+    requested.current = true;
     action(token)
       .then(() => setStatus('success'))
       .catch((err) => {

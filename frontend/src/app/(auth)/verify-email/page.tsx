@@ -1,14 +1,15 @@
+'use client';
+
+import { useSearchParams } from 'next/navigation';
 import { ConfirmationStatus } from '@/features/auth/components/ConfirmationStatus';
 import { verifyEmail } from '@/features/auth/api/authApi';
 
-interface VerifyEmailPageProps {
-  searchParams: { token?: string };
-}
+export default function VerifyEmailPage() {
+  const searchParams = useSearchParams();
 
-export default function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
   return (
     <ConfirmationStatus
-      token={searchParams.token ?? null}
+      token={searchParams.get('token')}
       action={verifyEmail}
       title="Verificacion de correo"
       successMessage="Correo verificado correctamente. Ya puedes iniciar sesion."
