@@ -59,6 +59,21 @@ public class Usuario {
     @Column(name = "token_expiracion")
     private OffsetDateTime tokenExpiracion;
 
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiracion")
+    private OffsetDateTime resetTokenExpiracion;
+
+    @Column(name = "cambio_token")
+    private String cambioToken;
+
+    @Column(name = "cambio_token_expiracion")
+    private OffsetDateTime cambioTokenExpiracion;
+
+    @Column(name = "contrasena_pendiente")
+    private String contrasenaPendiente;
+
     @Column(name = "activo", nullable = false)
     private boolean activo;
 
