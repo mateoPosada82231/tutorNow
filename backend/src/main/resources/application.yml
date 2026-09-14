@@ -15,8 +15,8 @@ app:
     expiration-ms: 86400000
     verification-expiration-ms: 86400000
   verification:
-    base-url: http://localhost:8080/api/v1/auth/verify-email
+    base-url: http://localhost:3000/verify-email
   reset:
     base-url: http://localhost:3000/reset-password
   change-confirm:
-    base-url: http://localhost:8080/api/v1/auth/confirm-password-change
+    base-url: http://localhost:3000/confirm-password-change
