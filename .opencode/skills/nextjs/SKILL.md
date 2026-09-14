@@ -99,10 +99,34 @@ interface AuthState {
   logout: () => void
 }
 ```
-- Token vive SOLO en `useAuthStore` con persist
+- Token vive SOLO en `useAuthStore` con persist (localStorage key: `tutornow-auth`)
 - HttpClient lee vía `useAuthStore.getState().token`
 - Sin escrituras manuales a `localStorage`
 - Sin key `token` suelto
+
+## Decisiones de la implementación auth (Sprint 1, 2026-09-13)
+
+Implementado en `features/auth/` + grupos de ruta `(auth)` y `(dashboard)`:
+
+### httpClient (`src/lib/httpClient.ts`)
+- Wrapper sobre `fetch` con base URL de `NEXT_PUBLIC_API_URL` (default `http://localhost:8080/api/v1`)
+- Opción `{ auth: true }` inyecta `Authorization: Bearer` leyendo `useAuthStore.getState().token`
+- Errores se lanzan como `HttpError(status, message, errors?)` parseando el `ErrorResponse` del backend; los formularios mapean `err.errors` a campos de input
+
+### Rutas y protección
+- `(auth)`: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/verify-email`, `/confirm-password-change`. Layout compartido `AuthLayout` (tarjeta centrada mobile-first)
+- `(dashboard)`: `/dashboard`, `/settings/password`. Protegidas con el hook global `src/hooks/useRequireAuth.ts` (client-side: sin token redirige a `/login`)
+- `/` (raíz) redirige a `/login` — el login es la puerta de entrada porque exige correo verificado
+- Enlaces de correo apuntan al frontend `:3000`; las páginas `verify-email`, `reset-password` y `confirm-password-change` leen `searchParams.token` y llaman al backend. Patrón reutilizable: `ConfirmationStatus` (loading/success/error)
+
+### Validación espejo
+- `features/auth/hooks/validation.ts` replica las reglas del backend: regex de `@elpoli.edu.co` y reglas de contraseña (8+ chars, mayúscula, minúscula, número). Validar en cliente Y servidor
+
+### Flujos de UX acordados
+- Registro exitoso NO loguea: muestra "revisa tu correo" + CTA a login
+- Login con 403 muestra aviso de correo no verificado (no autorrellena)
+- forgot-password siempre muestra éxito genérico (el backend no revela si el correo existe)
+- Cambio de contraseña es de 2 pasos: form autenticado genera correo de confirmación; el cambio se aplica al hacer clic en el enlace
 
 ## TypeScript
 - Tipar todo: props, state, API responses

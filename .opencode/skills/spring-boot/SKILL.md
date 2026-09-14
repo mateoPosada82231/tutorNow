@@ -75,6 +75,43 @@ Entidades: usar `@Getter` y `@Setter` individualmente (no `@Data` en entidades J
 - **Cifrado E2E**: AES-256-GCM opcional para endpoints sensibles
 - **Forgot-password**: no revelar si el correo existe
 
+## Decisiones de autenticación (Sprint 1, 2026-09-13)
+
+Implementado en `auth/` + `users/`. Estas decisiones rigen todo el desarrollo futuro:
+
+### Flujo obligatorio de verificación de correo
+- Registro crea el usuario con `verificado = false` + `verification_token` (UUID, 24h de vida).
+- El login **rechaza con 403** si el correo no está verificado (`CorreoNoVerificadoException`).
+- Verificación vía `GET /api/v1/auth/verify-email?token=...`. Token de un solo uso: se limpia en BD al usarse.
+- Solo correos `@elpoli.edu.co` (validación con `@Pattern` regex en DTOs).
+
+### Tokens en la entidad Usuario (BD, no JWT)
+- `verification_token` + `token_expiracion` (24h), `reset_token` + `reset_token_expiracion` (15 min), `cambio_token` + `cambio_token_expiracion` (15 min) + `contrasena_pendiente`.
+- Todos los tokens son UUID, single-use, y se invalidan limpiando la columna tras uso exitoso.
+- Un nuevo token sobrescribe el anterior (solo el último enlace es válido).
+
+### Recuperación y cambio de contraseña
+- `POST /auth/forgot-password`: siempre responde 200 con mensaje genérico; si el correo existe, genera `reset_token` y envía correo.
+- `POST /auth/reset-password`: aplica nueva contraseña BCrypt con el `reset_token`.
+- `POST /auth/change-password`: **requiere JWT** (`@AuthenticationPrincipal`), valida contraseña actual, rechaza si la nueva es igual a la actual, guarda `contrasena_pendiente` y envía confirmación.
+- `GET /auth/confirm-password-change?token=...`: aplica `contrasena_pendiente`.
+
+### Correo simulado
+- `EmailService` **no envía correos reales**: escribe el enlace en logs con prefijo `[EMAIL SIMULADO]` (SLF4J).
+- Los enlaces apuntan al **frontend** (`http://localhost:3000/...`), configurados en `application.yml` bajo `app.verification.base-url`, `app.reset.base-url`, `app.change-confirm.base-url`.
+- Pendiente: reemplazar por SMTP real antes de producción.
+
+### SecurityConfig
+- Rutas públicas explícitas (lista blanca): `/register`, `/login`, `/verify-email`, `/forgot-password`, `/reset-password`, `/confirm-password-change`. **No** usar `permitAll()` sobre `/api/v1/auth/**` porque `change-password` requiere JWT.
+- CSRF deshabilitado (API stateless con JWT).
+- CORS habilitado solo para `http://localhost:3000` (origen del frontend en dev) en `/api/**`.
+- Sin `AuthenticationProvider` bean manual: Spring Boot lo auto-configura desde `UserDetailsService` + `PasswordEncoder`.
+
+### Contraseñas y roles
+- Reglas de contraseña (espejo en frontend): 8-72 chars, mínimo 1 mayúscula, 1 minúscula, 1 número.
+- Roles implementados: `ESTUDIANTE`, `TUTOR`, `ADMIN`. El registro asigna siempre `ESTUDIANTE`.
+- Correos se normalizan a minúsculas y sin espacios antes de guardar/consultar.
+
 ## Excepciones
 ```java
 @RestControllerAdvice

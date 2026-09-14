@@ -71,19 +71,44 @@ En todos los demás casos, usar Tailwind directamente.
 <Card className="bg-white border rounded-lg shadow-sm p-6">
 ```
 
-## Design Tokens (CSS Variables)
+## Design Tokens (CSS Variables) - Paleta Politécnico JIC
+
+Decisión del proyecto (2026-09-13): paleta institucional del Politécnico Colombiano JIC, definida en `src/app/globals.css` y mapeada en `tailwind.config.ts`:
+
 ```css
 :root {
-  --color-primary: #2563eb;
-  --color-secondary: #7c3aed;
-  --color-success: #16a34a;
-  --color-error: #dc2626;
-  --color-warning: #f59e0b;
-  --spacing-section: 4rem;
-  --radius-default: 0.5rem;
+  --bg-primary: #FAFAFA;
+  --bg-surface: #FFFFFF;
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --brand-poli: #006837;
+  --brand-poli-hover: #004d29;
+  --brand-accent: #82B53F;
+  --border-color: #E2E8F0;
+  --color-error: #DC2626;
+  --color-success: #16A34A;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #0F172A;
+  --bg-surface: #1E293B;
+  --text-main: #F1F5F9;
+  --text-muted: #94A3B8;
+  --brand-poli: #00A859;
+  --brand-poli-hover: #00c06a;
+  --brand-accent: #A2D35A;
+  --border-color: #334155;
 }
 ```
-Referenciar en Tailwind config para uso consistente.
+
+Mapeo en Tailwind: `bg-bg-primary`, `bg-bg-surface`, `text-text-main`, `text-text-muted`, `bg-brand-poli`, `bg-brand-accent`, `border-border-color`, `text-error`, `text-success`.
+
+### Regla 60-30-10 (obligatoria)
+- 60% fondo neutro (`bg-primary`), 30% superficie/texto (`bg-surface` / `text-main`), 10% verde institucional (`brand-poli`)
+- `brand-poli` SOLO en CTAs clave, logo y acentos; `brand-accent` para secundarios; nunca saturar bloques grandes de verde
+
+## Dark mode
+- Variables listas bajo `[data-theme="dark"]`; el toggle de tema es funcionalidad pendiente
 
 ## Transiciones
 - Toda interacción visible debe tener transición

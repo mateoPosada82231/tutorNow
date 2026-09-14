@@ -17,16 +17,24 @@ description: Use when designing or reviewing REST API endpoints for tutorNow. Co
 
 ## Endpoints principales
 
-### Auth
+### Auth (IMPLEMENTADO Sprint 1)
 ```
-POST   /api/v1/auth/register          # Registro
-POST   /api/v1/auth/login             # Login
-POST   /api/v1/auth/refresh           # Refresh token
-POST   /api/v1/auth/forgot-password   # Solicitar reset
-POST   /api/v1/auth/reset-password    # Reset con token
-GET    /api/v1/auth/google            # OAuth2 Google
-GET    /api/v1/auth/facebook          # OAuth2 Facebook
+POST   /api/v1/auth/register                 # 201, requiere confirmación de correo antes de login
+POST   /api/v1/auth/login                    # 403 si correo no verificado
+GET    /api/v1/auth/verify-email?token=      # Confirma cuenta (token 24h, single-use)
+POST   /api/v1/auth/forgot-password          # Siempre 200 (no revela si existe), token 15 min
+POST   /api/v1/auth/reset-password           # {token, newPassword}
+POST   /api/v1/auth/change-password          # REQUIERE JWT: {currentPassword, newPassword} -> envía correo de confirmación
+GET    /api/v1/auth/confirm-password-change?token=  # Aplica contrasena_pendiente
+POST   /api/v1/auth/refresh                  # Refresh token (pendiente)
+GET    /api/v1/auth/google                   # OAuth2 Google (pendiente)
+GET    /api/v1/auth/facebook                 # OAuth2 Facebook (pendiente)
 ```
+
+Notas acordadas para auth:
+- `forgot-password` SIEMPRE responde 200 genérico; nunca revelar si el correo existe
+- Respuestas simples con `{ "message": "..." }` para acciones sin payload
+- Los cuerpos de request/response de estos endpoints son contrato estable; cambios requieren migración del frontend (`features/auth/types/index.ts`)
 
 ### Users
 ```

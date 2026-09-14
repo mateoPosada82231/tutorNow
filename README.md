@@ -44,13 +44,22 @@ tutorNow/
 ### Correr el backend
 ```bash
 cd backend
-./mvnw spring-boot:run
+mvn spring-boot:run
+```
+
+Hot reload y tests:
+```bash
+mvn compile   # solo compilar
+mvn test      # unit tests (H2 en memoria para el contexto de Spring)
 ```
 
 ### Base de datos
 ```bash
-# Requiere PostgreSQL 15+ corriendo
-# Configurar en application-dev.yml
+# Requiere PostgreSQL 15+ corriendo (perfil dev)
+# Crear base: CREATE DATABASE tutornow;
+# Credenciales en backend/src/main/resources/application-dev.yml
+# Migraciones Flyway automaticas en backend/src/main/resources/db/migration/
+# El envio de correos esta SIMULADO en logs (EmailService, prefijo [EMAIL SIMULADO])
 ```
 
 ## Frontend (Next.js)
@@ -66,8 +75,19 @@ cd backend
 ```bash
 cd frontend
 npm install
-npm run dev
+cp .env.example .env.local   # configurar NEXT_PUBLIC_API_URL
+npm run dev                  # http://localhost:3000 (redirige a /login)
+npm test                     # Vitest + Testing Library
 ```
+
+## Estado del backlog implementado
+
+| Modulo | Estado | Detalle |
+|--------|--------|---------|
+| Autenticacion (registro, login, verificacion, reset, cambio) | Implementado | Correos simulados en logs del backend |
+| Gestion de asesorias, perfiles, resenas, admin | Pendiente | Ver mapa-de-navegacion.jpg |
+
+Endpoints auth implementados: `POST /api/v1/auth/{register,login,forgot-password,reset-password,change-password}` + `GET /api/v1/auth/{verify-email,confirm-password-change}`. Contrato completo en `.opencode/skills/api-design/SKILL.md`.
 
 ## Convenciones de desarrollo
 

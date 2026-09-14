@@ -60,7 +60,7 @@ CREATE TYPE estado_solicitud AS ENUM ('PUBLICADA', 'CON_PROPUESTAS', 'EN_COORDIN
 
 ## Tablas principales (schema inicial)
 
-### usuarios
+### usuarios (IMPLEMENTADO - V1 + V2)
 ```sql
 CREATE TABLE usuarios (
     id BIGSERIAL PRIMARY KEY,
@@ -69,13 +69,32 @@ CREATE TABLE usuarios (
     nombre_completo VARCHAR(200) NOT NULL,
     programa VARCHAR(100),
     semestre INTEGER,
-    rol VARCHAR(20) NOT NULL DEFAULT 'USER',
-    activo BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    rol VARCHAR(20) NOT NULL DEFAULT 'ESTUDIANTE',
+    verificado BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_token VARCHAR(255),
+    token_expiracion TIMESTAMP WITH TIME ZONE,
+    reset_token VARCHAR(255),
+    reset_token_expiracion TIMESTAMP WITH TIME ZONE,
+    cambio_token VARCHAR(255),
+    cambio_token_expiracion TIMESTAMP WITH TIME ZONE,
+    contrasena_pendiente VARCHAR(255),
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     CONSTRAINT uniq_usuarios_correo UNIQUE (correo_electronico)
 );
+
+CREATE INDEX idx_usuarios_correo ON usuarios(correo_electronico);
+CREATE INDEX idx_usuarios_verification_token ON usuarios(verification_token);
+CREATE INDEX idx_usuarios_reset_token ON usuarios(reset_token);
+CREATE INDEX idx_usuarios_cambio_token ON usuarios(cambio_token);
 ```
+
+Decisiones (2026-09-13):
+- Enum `rol` vía columna VARCHAR: `ESTUDIANTE` (default en registro), `TUTOR`, `ADMIN`
+- Tokens de verificación/reset/cambio viven EN LA TABLA usuarios (no tabla separada): UUID single-use, se limpian a NULL al usarse; solicitar uno nuevo sobrescribe el anterior
+- Índices en todos los tokens porque se consultan por lookup directo
+- Expiraciones: verification 24h, reset y cambio 15 min (validadas en la capa de servicio, no en BD)
 
 ### solicitudes_asesoria
 ```sql

@@ -5,9 +5,14 @@ description: Use when writing or reviewing tests for tutorNow. Covers JUnit 5 + 
 
 # Testing Conventions - tutorNow
 
+## Estado actual (2026-09-13)
+- **Backend**: `AuthServiceTest` con clases anidadas `@Nested` por flujo (Register, VerifyEmail, Login, RecuperarContrasena, CambiarContrasena) + `TutorNowApplicationTests` (contexto completo con perfil `test` y H2 en memoria, Flyway deshabilitado, `ddl-auto: create-drop`)
+- **Frontend**: `LoginForm.test.tsx` y `RegisterForm.test.tsx` con `vi.mock()` para API; setup en `src/test/setup.ts` con `@testing-library/jest-dom`; config en `vitest.config.ts` con alias `@/`
+- Nota: en este proyecto los test mocks del router usan `vi.mock('next/navigation', ...)`
+
 ## Stack
 - **Backend**: JUnit 5 + Mockito + Spring Boot Test
-- **Frontend**: Vitest + React Testing Library
+- **Frontend**: Vitest + React Testing Library + jsdom
 
 ## Backend (Spring Boot)
 
