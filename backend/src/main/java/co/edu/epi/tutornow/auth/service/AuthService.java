@@ -1,5 +1,7 @@
 package co.edu.epi.tutornow.auth.service;
 
+import co.edu.epi.tutornow.catalog.repository.CarreraRepository;
+import co.edu.epi.tutornow.catalog.repository.SemestreRepository;
 import co.edu.epi.tutornow.common.exception.ConflictException;
 import co.edu.epi.tutornow.common.exception.CorreoNoVerificadoException;
 import co.edu.epi.tutornow.common.exception.CredencialesInvalidasException;
@@ -29,6 +31,8 @@ import java.util.UUID;
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
+    private final CarreraRepository carreraRepository;
+    private final SemestreRepository semestreRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
@@ -44,12 +48,17 @@ public class AuthService {
 
         String token = UUID.randomUUID().toString();
 
+        var carrera = carreraRepository.findById(request.getCarreraId())
+                .orElseThrow(() -> new ConflictException("Carrera no valida"));
+        var semestre = semestreRepository.findById(request.getSemestreId())
+                .orElseThrow(() -> new ConflictException("Semestre no valido"));
+
         Usuario usuario = Usuario.builder()
                 .correoElectronico(correo)
                 .contrasena(passwordEncoder.encode(request.getPassword()))
                 .nombreCompleto(request.getFullName())
-                .programa(request.getProgram())
-                .semestre(request.getSemester())
+                .carrera(carrera)
+                .semestreRef(semestre)
                 .rol(Rol.ESTUDIANTE)
                 .verificado(false)
                 .activo(true)

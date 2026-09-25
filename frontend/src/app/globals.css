@@ -13,6 +13,8 @@
   --border-color: #E2E8F0;
   --color-error: #DC2626;
   --color-success: #16A34A;
+  --hero-from: #00522B;
+  --hero-to: #157A3E;
 }
 
 [data-theme="dark"] {
@@ -24,9 +26,27 @@
   --brand-poli-hover: #00c06a;
   --brand-accent: #A2D35A;
   --border-color: #334155;
+  --color-error: #F87171;
+  --color-success: #4ADE80;
+  --hero-from: #06281A;
+  --hero-to: #0E4E2B;
+}
+
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+::selection {
+  background-color: var(--brand-accent);
+  color: #0F172A;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-main);
+  transition: background-color 300ms ease, color 300ms ease;
 }

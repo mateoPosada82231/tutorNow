@@ -36,12 +36,34 @@ Notas acordadas para auth:
 - Respuestas simples con `{ "message": "..." }` para acciones sin payload
 - Los cuerpos de request/response de estos endpoints son contrato estable; cambios requieren migración del frontend (`features/auth/types/index.ts`)
 
-### Users
+### Users (IMPLEMENTADO Sprint 2)
 ```
-GET    /api/v1/users/me               # Perfil propio
-PUT    /api/v1/users/me               # Actualizar perfil
-GET    /api/v1/users/{id}             # Perfil público (si está permitido)
+GET    /api/v1/users/me               # Perfil propio: {id, email, fullName, role, carrera{id,label}, semestre{id,label}, isTutor}
+PUT    /api/v1/users/me               # Actualizar: {fullName, carreraId, semestreId} -> 200 perfil actualizado (409 si catálogo inválido)
+GET    /api/v1/users/{id}             # Perfil público (pendiente)
 ```
+Notas acordadas para users:
+- El correo NO es editable (es el login institucional); la contraseña tiene su propio flujo (/auth/change-password)
+- `isTutor` se deriva de `role == TUTOR`
+
+### Tutors - perfil de tutor (IMPLEMENTADO Sprint 2)
+```
+POST   /api/v1/tutors/me              # Convertirse en tutor: {biografia, materiaIds[]} -> 201 TutorResponse (409 si ya es tutor)
+GET    /api/v1/tutors/me              # Perfil de tutor propio (404 si no es tutor)
+PUT    /api/v1/tutors/me              # Actualizar {biografia, materiaIds} -> 200
+```
+Notas acordadas para tutors:
+- Activación inmediata sin aprobación; en la misma transacción el rol pasa a TUTOR
+- `biografia`: obligatoria, 10-1000 chars; `materiaIds`: mínimo 1, mínimo inválido/inactivo -> 409 conflict
+- `TutorResponse`: {id, biografia, materias[{id,label}], createdAt}
+
+### Catalogs (IMPLEMENTADO)
+```
+GET    /api/v1/catalogs/carreras      # List[Carrera{id,label}] (público)
+GET    /api/v1/catalogs/semestres     # label = "Semestre N" (público)
+GET    /api/v1/catalogs/materias      # Catálogo plano global (público, seed en V4)
+```
+
 
 ### Tutoring Requests (Solicitudes)
 ```

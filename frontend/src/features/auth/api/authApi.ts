@@ -1,6 +1,7 @@
 import { httpClient } from '@/lib/httpClient';
 import type {
   AuthResponse,
+  CatalogItem,
   LoginRequest,
   MessageResponse,
   RegisterRequest,
@@ -42,4 +43,12 @@ export function confirmPasswordChange(token: string): Promise<MessageResponse> {
   return httpClient.get<MessageResponse>(
     `/auth/confirm-password-change?token=${encodeURIComponent(token)}`,
   );
+}
+
+export function fetchCarreras(): Promise<CatalogItem[]> {
+  return httpClient.get<CatalogItem[]>('/catalogs/carreras');
+}
+
+export function fetchSemestres(): Promise<CatalogItem[]> {
+  return httpClient.get<CatalogItem[]>('/catalogs/semestres');
 }

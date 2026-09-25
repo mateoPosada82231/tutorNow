@@ -7,18 +7,36 @@ import { HttpError } from '@/lib/httpClient';
 
 vi.mock('../api/authApi', () => ({
   registerUser: vi.fn(),
+  fetchCarreras: vi.fn(),
+  fetchSemestres: vi.fn(),
 }));
+
+const mockCarreras = [
+  { id: 1, label: 'Ingenieria de Sistemas' },
+  { id: 2, label: 'Ingenieria Civil' },
+];
+
+const mockSemestres = [
+  { id: 1, label: 'Semestre 1' },
+  { id: 2, label: 'Semestre 2' },
+];
 
 describe('RegisterForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(authApi.fetchCarreras).mockResolvedValue(mockCarreras);
+    vi.mocked(authApi.fetchSemestres).mockResolvedValue(mockSemestres);
   });
 
-  it('renderiza el formulario de registro', () => {
+  it('renderiza el formulario de registro', async () => {
     render(<RegisterForm />);
 
-    expect(screen.getByLabelText(/correo institucional/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo institucional/i)).toBeInTheDocument();
+    });
     expect(screen.getByLabelText(/nombre completo/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/carrera/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/semestre/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^contrasena$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirmar contrasena/i)).toBeInTheDocument();
   });
@@ -26,6 +44,10 @@ describe('RegisterForm', () => {
   it('muestra error si el correo no es institucional', async () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo institucional/i)).toBeInTheDocument();
+    });
 
     await user.type(screen.getByLabelText(/correo institucional/i), 'test@gmail.com');
     await user.click(screen.getByRole('button', { name: /registrarme/i }));
@@ -38,8 +60,14 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo institucional/i)).toBeInTheDocument();
+    });
+
     await user.type(screen.getByLabelText(/correo institucional/i), 'test@elpoli.edu.co');
     await user.type(screen.getByLabelText(/nombre completo/i), 'Test User');
+    await user.selectOptions(screen.getByLabelText(/carrera/i), '1');
+    await user.selectOptions(screen.getByLabelText(/semestre/i), '1');
     await user.type(screen.getByLabelText(/^contrasena$/i), 'Pass123!');
     await user.type(screen.getByLabelText(/confirmar contrasena/i), 'OtraPass1!');
     await user.click(screen.getByRole('button', { name: /registrarme/i }));
@@ -60,8 +88,14 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo institucional/i)).toBeInTheDocument();
+    });
+
     await user.type(screen.getByLabelText(/correo institucional/i), 'test@elpoli.edu.co');
     await user.type(screen.getByLabelText(/nombre completo/i), 'Test User');
+    await user.selectOptions(screen.getByLabelText(/carrera/i), '1');
+    await user.selectOptions(screen.getByLabelText(/semestre/i), '1');
     await user.type(screen.getByLabelText(/^contrasena$/i), 'Pass123!');
     await user.type(screen.getByLabelText(/confirmar contrasena/i), 'Pass123!');
     await user.click(screen.getByRole('button', { name: /registrarme/i }));
@@ -79,8 +113,14 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
+    await waitFor(() => {
+      expect(screen.getByLabelText(/correo institucional/i)).toBeInTheDocument();
+    });
+
     await user.type(screen.getByLabelText(/correo institucional/i), 'test@elpoli.edu.co');
     await user.type(screen.getByLabelText(/nombre completo/i), 'Test User');
+    await user.selectOptions(screen.getByLabelText(/carrera/i), '1');
+    await user.selectOptions(screen.getByLabelText(/semestre/i), '1');
     await user.type(screen.getByLabelText(/^contrasena$/i), 'Pass123!');
     await user.type(screen.getByLabelText(/confirmar contrasena/i), 'Pass123!');
     await user.click(screen.getByRole('button', { name: /registrarme/i }));

@@ -96,6 +96,39 @@ Decisiones (2026-09-13):
 - Índices en todos los tokens porque se consultan por lookup directo
 - Expiraciones: verification 24h, reset y cambio 15 min (validadas en la capa de servicio, no en BD)
 
+### tutores + materias (IMPLEMENTADO - V4)
+```sql
+CREATE TABLE tutores (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_id BIGINT NOT NULL REFERENCES usuarios(id),
+    biografia TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uniq_tutores_usuario_id UNIQUE (usuario_id)
+);
+
+CREATE TABLE materias (
+    id BIGSERIAL PRIMARY KEY,
+    nombre VARCHAR(150) NOT NULL,
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT uniq_materias_nombre UNIQUE (nombre)
+);
+
+CREATE TABLE tutor_materias (
+    tutor_id BIGINT NOT NULL REFERENCES tutores(id),
+    materia_id BIGINT NOT NULL REFERENCES materias(id),
+    PRIMARY KEY (tutor_id, materia_id)
+);
+
+CREATE INDEX idx_tutor_materias_tutor_id ON tutor_materias(tutor_id);
+CREATE INDEX idx_tutor_materias_materia_id ON tutor_materias(materia_id);
+```
+Decisiones (2026-09-25):
+- Relación tutores↔usuarios 1:1 con FK por `usuario_id` (NO por correo): los FKs apuntan a PK por convención
+- `materias` es catálogo plano global (no ligado a carrera): un tutor puede asesorar materias de otras carreras; seed de 40 materias en V4
+- Juntura `tutor_materias` sin ON DELETE CASCADE (soft delete por convención; los tutores se "borran" desactivando)
+
 ### solicitudes_asesoria
 ```sql
 CREATE TABLE solicitudes_asesoria (

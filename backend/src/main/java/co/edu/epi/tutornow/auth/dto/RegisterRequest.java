@@ -1,6 +1,8 @@
 package co.edu.epi.tutornow.auth.dto;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -27,8 +29,11 @@ public class RegisterRequest {
     @Size(max = 200, message = "El nombre completo no puede superar 200 caracteres")
     private String fullName;
 
-    @Size(max = 100, message = "El programa no puede superar 100 caracteres")
-    private String program;
+    @NotNull(message = "La carrera es obligatoria")
+    @Min(value = 1, message = "Carrera no valida")
+    private Long carreraId;
 
-    private Integer semester;
+    @NotNull(message = "El semestre es obligatorio")
+    @Min(value = 1, message = "Semestre no valido")
+    private Long semestreId;
 }

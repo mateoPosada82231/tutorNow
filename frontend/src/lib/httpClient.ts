@@ -55,6 +55,16 @@ export const httpClient = {
     if (!response.ok) await parseError(response);
     return response.json() as Promise<T>;
   },
+
+  async put<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
+    const response = await fetch(`${config.apiUrl}${path}`, {
+      method: 'PUT',
+      headers: buildHeaders(options.auth),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) await parseError(response);
+    return response.json() as Promise<T>;
+  },
 };
 
 function buildHeaders(withAuth = false): HeadersInit {

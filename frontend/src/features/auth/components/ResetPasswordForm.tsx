@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { resetPassword } from '../api/authApi';
 import { validatePassword } from '../hooks/validation';
 
@@ -66,19 +67,18 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
 
       {error ? <Alert type="error">{error}</Alert> : null}
 
-      <Input
+      <PasswordInput
         id="reset-password"
         label="Nueva contrasena"
-        type="password"
         placeholder="Minimo 8 caracteres, mayuscula, minuscula y numero"
         value={newPassword}
         onChange={(e) => setNewPassword(e.target.value)}
         autoComplete="new-password"
+        showRequirements
       />
-      <Input
+      <PasswordInput
         id="reset-confirm"
         label="Confirmar nueva contrasena"
-        type="password"
         placeholder="Repite la contrasena"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}

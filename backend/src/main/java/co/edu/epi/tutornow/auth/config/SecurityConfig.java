@@ -40,7 +40,8 @@ public class SecurityConfig {
                                 "/api/v1/auth/verify-email",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
-                                "/api/v1/auth/confirm-password-change"
+                                "/api/v1/auth/confirm-password-change",
+                                "/api/v1/catalogs/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

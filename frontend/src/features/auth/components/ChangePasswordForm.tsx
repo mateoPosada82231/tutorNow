@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { changePassword } from '../api/authApi';
 import { validatePassword } from '../hooks/validation';
 
@@ -69,19 +70,18 @@ export function ChangePasswordForm() {
         onChange={(e) => setCurrentPassword(e.target.value)}
         autoComplete="current-password"
       />
-      <Input
+      <PasswordInput
         id="new-password"
         label="Nueva contrasena"
-        type="password"
         placeholder="Minimo 8 caracteres, mayuscula, minuscula y numero"
         value={newPassword}
         onChange={(e) => setNewPassword(e.target.value)}
         autoComplete="new-password"
+        showRequirements
       />
-      <Input
+      <PasswordInput
         id="confirm-new-password"
         label="Confirmar nueva contrasena"
-        type="password"
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         autoComplete="new-password"

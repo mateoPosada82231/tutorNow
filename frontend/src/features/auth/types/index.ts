@@ -2,8 +2,8 @@ export interface RegisterRequest {
   email: string;
   password: string;
   fullName: string;
-  program?: string;
-  semester?: number;
+  carreraId: number;
+  semestreId: number;
 }
 
 export interface RegisterResponse {
@@ -32,4 +32,9 @@ export interface AuthResponse {
 
 export interface MessageResponse {
   message: string;
+}
+
+export interface CatalogItem {
+  id: number;
+  label: string;
 }

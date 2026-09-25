@@ -10,6 +10,10 @@ import co.edu.epi.tutornow.auth.dto.ResetPasswordRequest;
 import co.edu.epi.tutornow.auth.service.AuthService;
 import co.edu.epi.tutornow.auth.service.EmailService;
 import co.edu.epi.tutornow.auth.service.JwtService;
+import co.edu.epi.tutornow.catalog.model.Carrera;
+import co.edu.epi.tutornow.catalog.model.Semestre;
+import co.edu.epi.tutornow.catalog.repository.CarreraRepository;
+import co.edu.epi.tutornow.catalog.repository.SemestreRepository;
 import co.edu.epi.tutornow.common.exception.ConflictException;
 import co.edu.epi.tutornow.common.exception.CorreoNoVerificadoException;
 import co.edu.epi.tutornow.common.exception.CredencialesInvalidasException;
@@ -61,6 +65,12 @@ class AuthServiceTest {
     private EmailService emailService;
 
     @Mock
+    private CarreraRepository carreraRepository;
+
+    @Mock
+    private SemestreRepository semestreRepository;
+
+    @Mock
     private AuthenticationManager authenticationManager;
 
     @InjectMocks
@@ -75,6 +85,8 @@ class AuthServiceTest {
         void shouldRegisterUserSuccessfully() {
             RegisterRequest request = buildRegisterRequest("nuevo@elpoli.edu.co");
             when(usuarioRepository.existsByCorreoElectronico("nuevo@elpoli.edu.co")).thenReturn(false);
+            when(carreraRepository.findById(1L)).thenReturn(Optional.of(Carrera.builder().id(1L).nombre("Ingenieria de Sistemas").activa(true).build()));
+            when(semestreRepository.findById(1L)).thenReturn(Optional.of(Semestre.builder().id(1L).numero(1).activo(true).build()));
             when(passwordEncoder.encode(anyString())).thenReturn("hash_encriptado");
             when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> {
                 Usuario u = invocation.getArgument(0);
@@ -105,6 +117,8 @@ class AuthServiceTest {
         void shouldNormalizeEmailToLowerCase() {
             RegisterRequest request = buildRegisterRequest("  USUARIO@elpoli.edu.co  ");
             when(usuarioRepository.existsByCorreoElectronico("usuario@elpoli.edu.co")).thenReturn(false);
+            when(carreraRepository.findById(1L)).thenReturn(Optional.of(Carrera.builder().id(1L).nombre("Ingenieria de Sistemas").activa(true).build()));
+            when(semestreRepository.findById(1L)).thenReturn(Optional.of(Semestre.builder().id(1L).numero(1).activo(true).build()));
             when(passwordEncoder.encode(anyString())).thenReturn("hash");
             when(usuarioRepository.save(any(Usuario.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -384,8 +398,8 @@ class AuthServiceTest {
                 .email(email)
                 .password("Pass123!")
                 .fullName("Usuario Prueba")
-                .program("Ingenieria de Sistemas")
-                .semester(5)
+                .carreraId(1L)
+                .semestreId(1L)
                 .build();
     }
 

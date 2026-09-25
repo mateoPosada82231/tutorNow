@@ -20,17 +20,13 @@ description: Use when writing or reviewing Spring Boot backend code for tutorNow
 ## Estructura modular (Spring Modulith)
 ```
 co/edu/epi/tutornow/
-├── auth/
-│   ├── controller/
-│   ├── service/
-│   ├── repository/
-│   ├── model/
-│   ├── dto/
-│   └── config/
-├── users/
-├── tutoring/
-├── reviews/
-├── admin/
+├── auth/                 # controller/service/repository/model/dto/config (Sprint 1)
+├── users/                # model/repository (Sprint 1) + controller/service/dto (Sprint 2)
+├── catalog/              # Carrera/Semestre (Sprint 1) + Materia (Sprint 2): model/repository/controller/dto
+├── tutors/               # Perfil de tutor 1:1 con usuarios (Sprint 2)
+├── tutoring/             # Solicitudes/asesorías (planeado)
+├── reviews/              # (planeado)
+├── admin/                # (planeado)
 └── common/
     ├── exception/
     ├── config/
@@ -111,6 +107,26 @@ Implementado en `auth/` + `users/`. Estas decisiones rigen todo el desarrollo fu
 - Reglas de contraseña (espejo en frontend): 8-72 chars, mínimo 1 mayúscula, 1 minúscula, 1 número.
 - Roles implementados: `ESTUDIANTE`, `TUTOR`, `ADMIN`. El registro asigna siempre `ESTUDIANTE`.
 - Correos se normalizan a minúsculas y sin espacios antes de guardar/consultar.
+
+## Decisiones de perfiles y tutores (Sprint 2, 2026-09-25)
+
+Implementado en `users/` + `tutors/` + `catalog/` (Materia). Migración `V4__create_tutores_materias_tables.sql`.
+
+### Perfil de usuario (`users/`)
+- `GET /api/v1/users/me` → `UserResponse {id, email, fullName, role, carrera{id,label}, semestre{id,label}, isTutor}`. `isTutor` se deriva de `rol == TUTOR` (no consulta la tabla tutores).
+- `PUT /api/v1/users/me` ← `UpdateProfileRequest {fullName, carreraId, semestreId}`: editables nombre completo, carrera y semestre. **El correo NO es editable** (es el login institucional).
+- catálogos inválidos (`carreraId`/`semestreId` inexistentes) → `ConflictException` (409), patrón heredado de `AuthService.register`.
+- Usuario inexistente → `ResourceNotFoundException` (404, nueva en `common/exception` con handler en `GlobalExceptionHandler`).
+- Relaciones LAZY (`carrera`, `semestreRef`) se acceden dentro de la transacción del service antes de mapear a DTO; el label de semestre es `"Semestre " + numero`.
+
+### Tutores (`tutors/`)
+- Tabla `tutores` es 1:1 con `usuarios` vía `usuario_id UNIQUE` (FK por id, no por correo).
+- Convertirse en tutor es **inmediato, sin aprobación**: `POST /api/v1/tutors/me` inserta en `tutores` y cambia `rol → TUTOR` en la misma transacción. 409 si ya es tutor.
+- `GET /tutors/me` sin perfil → 404 (`ResourceNotFoundException`).
+- Materias: catálogo **plano global** (no ligado a carrera), seed de 40 materias en V4. Relación N:M vía juntura `tutor_materias` (PK compuesta). Sin ON DELETE CASCADE (convención: soft delete).
+- Ids de materias inválidos/inactivos → `ConflictException`; se deduplican antes de validar.
+- `TutorResponse {id, biografia, materias[{id,label}], createdAt}`; materias LAZY mapeadas dentro de la transacción.
+- CRÍTICO: `@JoinTable(name = "tutor_materias", joinColumns='tutor_id', inverseJoinColumns='materia_id')` debe coincidir con la migración (tests usan H2 create-drop, no Flyway).
 
 ## Excepciones
 ```java
