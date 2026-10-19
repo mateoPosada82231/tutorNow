@@ -36,6 +36,10 @@ describe('Navbar', () => {
 
     expect(screen.getByText('tutorNow')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /panel/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /asesorías/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests',
+    );
     expect(
       screen.getByRole('button', { name: /cambiar a tema oscuro/i }),
     ).toBeInTheDocument();

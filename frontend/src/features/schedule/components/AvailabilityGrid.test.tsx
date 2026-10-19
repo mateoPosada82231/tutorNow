@@ -6,7 +6,7 @@ import {
 } from '@/features/schedule/components/AvailabilityGrid';
 
 describe('AvailabilityGrid', () => {
-  const cell = (name: string) => screen.getByRole('gridcell', { name: new RegExp(name, 'i') });
+  const cell = (name: RegExp) => screen.getByRole('gridcell', { name: new RegExp(name, 'i') });
 
   beforeEach(() => {
     vi.clearAllMocks();
