@@ -10,6 +10,7 @@ import {
   KeyRound,
   LayoutDashboard,
   LogOut,
+  MessageSquare,
   User,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -64,12 +65,20 @@ export function Navbar() {
     router.push("/login");
   }
 
-  const navLinkClass = (href: string) =>
-    `hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 sm:inline-flex ${
-      pathname === href
+  const navLinkClass = (href: string) => {
+    const active =
+      href === "/tutoring/requests"
+        ? pathname.startsWith("/tutoring/requests")
+        : href === "/tutoring"
+          ? pathname.startsWith("/tutoring") &&
+            !pathname.startsWith("/tutoring/requests")
+          : pathname === href;
+    return `hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 sm:inline-flex ${
+      active
         ? "bg-brand-poli/10 text-brand-poli"
         : "text-text-muted hover:text-brand-poli"
     }`;
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border-color bg-bg-surface shadow-sm transition-colors duration-300">
@@ -96,6 +105,10 @@ export function Navbar() {
           <Link href="/dashboard" className={navLinkClass("/dashboard")}>
             <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
             Panel
+          </Link>
+          <Link href="/tutoring/requests" className={navLinkClass("/tutoring/requests")}>
+            <MessageSquare className="h-4 w-4" aria-hidden="true" />
+            Asesorías
           </Link>
           {isTutor && (
             <Link href="/tutoring" className={navLinkClass("/tutoring")}>
@@ -162,6 +175,14 @@ export function Navbar() {
                     aria-hidden="true"
                   />
                   Mi perfil
+                </Link>
+                <Link
+                  href="/tutoring/requests"
+                  role="menuitem"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
+                >
+                  <MessageSquare className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                  Asesorías
                 </Link>
                 {isTutor && (
                   <Link

@@ -65,6 +65,16 @@ export const httpClient = {
     if (!response.ok) await parseError(response);
     return response.json() as Promise<T>;
   },
+
+  async delete<T>(path: string, options: RequestOptions = {}): Promise<T> {
+    const response = await fetch(`${config.apiUrl}${path}`, {
+      method: 'DELETE',
+      headers: buildHeaders(options.auth),
+    });
+    if (!response.ok) await parseError(response);
+    if (response.status === 204) return undefined as T;
+    return response.json() as Promise<T>;
+  },
 };
 
 function buildHeaders(withAuth = false): HeadersInit {
