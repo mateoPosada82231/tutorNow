@@ -5,9 +5,13 @@ import co.edu.epi.tutornow.catalog.repository.MateriaRepository;
 import co.edu.epi.tutornow.common.exception.ConflictException;
 import co.edu.epi.tutornow.common.exception.ResourceNotFoundException;
 import co.edu.epi.tutornow.tutors.dto.TutorProfileRequest;
+import co.edu.epi.tutornow.tutors.dto.TutorProfileResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.model.Tutor;
+import co.edu.epi.tutornow.tutors.model.TutorSlot;
+import co.edu.epi.tutornow.tutors.model.DiaSemana;
 import co.edu.epi.tutornow.tutors.repository.TutorRepository;
+import co.edu.epi.tutornow.tutors.repository.TutorSlotRepository;
 import co.edu.epi.tutornow.tutors.service.TutorService;
 import co.edu.epi.tutornow.users.model.Rol;
 import co.edu.epi.tutornow.users.model.Usuario;
@@ -21,6 +25,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -28,6 +33,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -40,6 +46,9 @@ class TutorServiceTest {
 
     @Mock
     private TutorRepository tutorRepository;
+
+    @Mock
+    private TutorSlotRepository tutorSlotRepository;
 
     @Mock
     private UsuarioRepository usuarioRepository;
@@ -195,6 +204,45 @@ class TutorServiceTest {
             assertThrows(ResourceNotFoundException.class,
                     () -> tutorService.updateMyTutorProfile("user@elpoli.edu.co", buildRequest(List.of(1L))));
             verify(tutorRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Perfil publico de tutor por id")
+    class GetTutorProfile {
+
+        @Test
+        @DisplayName("Retorna nombre, biografia, materias, disponibilidad y resenas vacias")
+        void shouldReturnPublicTutorProfile() {
+            Tutor tutor = buildTutor();
+            when(tutorRepository.findById(10L)).thenReturn(Optional.of(tutor));
+            when(tutorSlotRepository.findByTutorId(10L)).thenReturn(List.of(
+                    TutorSlot.builder().id(20L).tutor(tutor)
+                            .diaSemana(DiaSemana.MIERCOLES).horaInicio(LocalTime.of(14, 0)).build(),
+                    TutorSlot.builder().id(21L).tutor(tutor)
+                            .diaSemana(DiaSemana.LUNES).horaInicio(LocalTime.of(10, 0)).build()));
+
+            TutorProfileResponse response = tutorService.getTutorProfile(10L);
+
+            assertEquals(10L, response.getId());
+            assertEquals("Usuario Prueba", response.getFullName());
+            assertEquals("Soy tutor de matematicas", response.getBiografia());
+            assertEquals(1, response.getMaterias().size());
+            assertEquals("Calculo Diferencial", response.getMaterias().get(0).getLabel());
+            assertEquals(2, response.getDisponibilidad().size());
+            assertEquals(DiaSemana.LUNES, DiaSemana.valueOf(response.getDisponibilidad().get(0).getDiaSemana()));
+            assertEquals(LocalTime.of(10, 0), response.getDisponibilidad().get(0).getHoraInicio());
+            assertEquals(DiaSemana.MIERCOLES, DiaSemana.valueOf(response.getDisponibilidad().get(1).getDiaSemana()));
+            assertNotNull(response.getResenas());
+            assertEquals(0, response.getResenas().size());
+        }
+
+        @Test
+        @DisplayName("Lanza ResourceNotFoundException cuando el tutor no existe")
+        void shouldThrowNotFoundWhenTutorDoesNotExist() {
+            when(tutorRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThrows(ResourceNotFoundException.class, () -> tutorService.getTutorProfile(99L));
         }
     }
 

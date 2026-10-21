@@ -6,9 +6,13 @@ import co.edu.epi.tutornow.catalog.repository.MateriaRepository;
 import co.edu.epi.tutornow.common.exception.ConflictException;
 import co.edu.epi.tutornow.common.exception.ResourceNotFoundException;
 import co.edu.epi.tutornow.tutors.dto.TutorProfileRequest;
+import co.edu.epi.tutornow.tutors.dto.TutorProfileResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorResponse;
+import co.edu.epi.tutornow.tutors.dto.TutorSlotResponse;
 import co.edu.epi.tutornow.tutors.model.Tutor;
+import co.edu.epi.tutornow.tutors.model.TutorSlot;
 import co.edu.epi.tutornow.tutors.repository.TutorRepository;
+import co.edu.epi.tutornow.tutors.repository.TutorSlotRepository;
 import co.edu.epi.tutornow.users.model.Rol;
 import co.edu.epi.tutornow.users.model.Usuario;
 import co.edu.epi.tutornow.users.repository.UsuarioRepository;
@@ -16,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,6 +30,7 @@ import java.util.Set;
 public class TutorService {
 
     private final TutorRepository tutorRepository;
+    private final TutorSlotRepository tutorSlotRepository;
     private final UsuarioRepository usuarioRepository;
     private final MateriaRepository materiaRepository;
 
@@ -59,6 +65,13 @@ public class TutorService {
         return toResponse(findTutorOrThrow(correo));
     }
 
+    @Transactional(readOnly = true)
+    public TutorProfileResponse getTutorProfile(Long tutorId) {
+        Tutor tutor = tutorRepository.findById(tutorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tutor no encontrado"));
+        return toProfileResponse(tutor);
+    }
+
     @Transactional
     public TutorResponse updateMyTutorProfile(String correo, TutorProfileRequest request) {
         Tutor tutor = findTutorOrThrow(correo);
@@ -91,18 +104,42 @@ public class TutorService {
     }
 
     private TutorResponse toResponse(Tutor tutor) {
-        List<CatalogItemResponse> materias = tutor.getMaterias().stream()
+        return TutorResponse.builder()
+                .id(tutor.getId())
+                .biografia(tutor.getBiografia())
+                .materias(mapMaterias(tutor))
+                .createdAt(tutor.getCreatedAt())
+                .build();
+    }
+
+    private List<CatalogItemResponse> mapMaterias(Tutor tutor) {
+        return tutor.getMaterias().stream()
                 .map(m -> CatalogItemResponse.builder()
                         .id(m.getId())
                         .label(m.getNombre())
                         .build())
                 .toList();
+    }
 
-        return TutorResponse.builder()
+    private TutorProfileResponse toProfileResponse(Tutor tutor) {
+        List<TutorSlotResponse> disponibilidad = tutorSlotRepository.findByTutorId(tutor.getId()).stream()
+                .sorted(Comparator
+                        .comparingInt((TutorSlot slot) -> slot.getDiaSemana().ordinal())
+                        .thenComparing(TutorSlot::getHoraInicio))
+                .map(slot -> TutorSlotResponse.builder()
+                        .id(slot.getId())
+                        .diaSemana(slot.getDiaSemana().name())
+                        .horaInicio(slot.getHoraInicio())
+                        .build())
+                .toList();
+
+        return TutorProfileResponse.builder()
                 .id(tutor.getId())
+                .fullName(tutor.getUsuario().getNombreCompleto())
                 .biografia(tutor.getBiografia())
-                .materias(materias)
-                .createdAt(tutor.getCreatedAt())
+                .materias(mapMaterias(tutor))
+                .disponibilidad(disponibilidad)
+                .resenas(List.of())
                 .build();
     }
 }

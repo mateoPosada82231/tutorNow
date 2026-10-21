@@ -207,9 +207,7 @@ export default function TutoringRequestDetailPage() {
 
   const isOwner = request.isOwner;
   const acceptsProposals =
-    isOwner &&
-    !isTutor &&
-    (request.estado === 'PUBLICADA' || request.estado === 'EN_PROCESO');
+    isOwner && (request.estado === 'PUBLICADA' || request.estado === 'EN_PROCESO');
   const canPropose =
     isTutor &&
     !isOwner &&
@@ -314,8 +312,15 @@ export default function TutoringRequestDetailPage() {
 
       {request.estado === 'CONFIRMADA' && acceptedProposal && (
         <section aria-label="Propuesta aceptada" className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-text-main">Propuesta aceptada</h2>
-          <div className="rounded-2xl border-2 border-success p-1 transition-colors duration-200">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-text-main">Propuesta aceptada</h2>
+            {request.asesoria && (
+              <span className="inline-flex items-center gap-2 rounded-full bg-brand-accent/20 px-3 py-0.5 text-xs font-semibold text-text-main">
+                Asesoria #{request.asesoria.id} · Pendiente
+              </span>
+            )}
+          </div>
+          <div className="transition-colors duration-200">
             <ProposalCard proposal={acceptedProposal} canDecide={false} />
           </div>
         </section>

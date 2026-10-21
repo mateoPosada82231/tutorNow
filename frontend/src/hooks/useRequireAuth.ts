@@ -8,14 +8,45 @@ export function useRequireAuth() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    import('@/stores/useAuthStore').then(({ useAuthStore }) => {
+    let cancelled = false;
+
+    async function resolveSession() {
+      const { useAuthStore } = await import('@/stores/useAuthStore');
       const { token } = useAuthStore.getState();
+
       if (!token) {
         router.replace('/login');
-      } else {
-        setReady(true);
+        return;
       }
-    });
+
+      try {
+        const { fetchMyProfile } = await import('@/features/profile/api/profileApi');
+        const profile = await fetchMyProfile();
+
+        if (cancelled) return;
+
+        useAuthStore.getState().updateUser({
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.fullName,
+          role: profile.role,
+        });
+        setReady(true);
+      } catch (error) {
+        if (cancelled) return;
+        const { HttpError } = await import('@/lib/httpClient');
+        if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+          useAuthStore.getState().logout();
+        }
+        router.replace('/login');
+      }
+    }
+
+    void resolveSession();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   return ready;

@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/tutornow
-    username: postgres
-    password: admin
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/tutornow}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:admin}
   jpa:
     hibernate:
       ddl-auto: validate

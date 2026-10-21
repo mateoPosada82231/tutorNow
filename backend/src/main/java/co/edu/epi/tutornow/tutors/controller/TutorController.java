@@ -1,6 +1,7 @@
 package co.edu.epi.tutornow.tutors.controller;
 
 import co.edu.epi.tutornow.tutors.dto.TutorProfileRequest;
+import co.edu.epi.tutornow.tutors.dto.TutorProfileResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotsRequest;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +30,11 @@ public class TutorController {
 
     private final TutorService tutorService;
     private final TutorSlotService tutorSlotService;
+
+    @GetMapping("/{id}")
+    public ResponseEntity<TutorProfileResponse> getTutorProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(tutorService.getTutorProfile(id));
+    }
 
     @PostMapping("/me")
     public ResponseEntity<TutorResponse> becomeTutor(

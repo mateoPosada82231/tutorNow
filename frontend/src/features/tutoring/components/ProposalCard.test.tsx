@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProposalCard } from './ProposalCard';
 import type { Proposal } from '../types';
 
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 function buildProposal(overrides: Partial<Proposal> = {}): Proposal {
   return {
     id: 10,
@@ -77,5 +85,25 @@ describe('ProposalCard', () => {
     render(<ProposalCard proposal={buildProposal({ isMine: true })} canDecide={false} />);
 
     expect(screen.getByText('Mi propuesta')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ver perfil/i })).not.toBeInTheDocument();
+  });
+
+  it('muestra el enlace de ver perfil hacia el perfil del tutor cuando puede decidir', () => {
+    render(<ProposalCard proposal={buildProposal()} canDecide />);
+
+    const link = screen.getByRole('link', { name: /ver perfil/i });
+    expect(link).toHaveAttribute(
+      'href',
+      '/tutoring/tutors/3?solicitud=7&proposal=10',
+    );
+  });
+
+  it('muestra el enlace de ver perfil sin query params cuando la propuesta ya no esta pendiente', () => {
+    render(
+      <ProposalCard proposal={buildProposal({ estado: 'ACEPTADA' })} canDecide={false} />,
+    );
+
+    const link = screen.getByRole('link', { name: /ver perfil/i });
+    expect(link).toHaveAttribute('href', '/tutoring/tutors/3');
   });
 });

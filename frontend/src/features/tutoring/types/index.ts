@@ -8,6 +8,45 @@ export type SolicitudEstado = 'PUBLICADA' | 'EN_PROCESO' | 'CONFIRMADA' | 'CANCE
 
 export type PropuestaEstado = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
 
+export type AsesoriaEstado = 'PENDIENTE';
+
+export interface Asesoria {
+  id: number;
+  solicitudId: number;
+  propuestaId: number;
+  estado: AsesoriaEstado;
+  tutor: {
+    id: number;
+    fullName: string;
+    biografia: string;
+    materias: CatalogItem[];
+  };
+  createdAt: string;
+}
+
+export interface Resena {
+  id: number;
+  rating: number;
+  comentario: string;
+  autor: string;
+  createdAt: string;
+}
+
+export interface TutorSlot {
+  id: number;
+  diaSemana: string;
+  horaInicio: string;
+}
+
+export interface TutorProfile {
+  id: number;
+  fullName: string;
+  biografia: string;
+  materias: CatalogItem[];
+  disponibilidad: TutorSlot[];
+  resenas: Resena[];
+}
+
 export interface Proposal {
   id: number;
   solicitudId: number;
@@ -36,6 +75,7 @@ export interface TutoringRequest {
   isOwner: boolean;
   isProfileMatch: boolean | null;
   propuestas: Proposal[];
+  asesoria?: Asesoria | null;
   createdAt: string;
 }
 

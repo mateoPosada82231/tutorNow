@@ -4,6 +4,7 @@ import type {
   Page,
   Proposal,
   ProposalRequest,
+  TutorProfile,
   TutoringRequest,
   TutoringRequestFilters,
   TutoringRequestRequest,
@@ -55,4 +56,8 @@ export function rejectProposal(id: number): Promise<Proposal> {
 
 export function fetchCatalogoMaterias(): Promise<CatalogItem[]> {
   return httpClient.get<CatalogItem[]>('/catalogs/materias');
+}
+
+export function fetchTutorProfile(tutorId: number): Promise<TutorProfile> {
+  return httpClient.get<TutorProfile>(`/tutors/${tutorId}`, { auth: true });
 }

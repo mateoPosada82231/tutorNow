@@ -1,4 +1,5 @@
 import { config } from './config';
+import { endSession, redirectToLogin } from './session';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 export interface ApiError {
@@ -24,11 +25,15 @@ interface RequestOptions {
   auth?: boolean;
 }
 
-async function parseError(response: Response): Promise<never> {
+async function parseError(response: Response, options: RequestOptions): Promise<never> {
   let data: ApiError | null = null;
   try {
     data = await response.json();
   } catch {
+  }
+  if (response.status === 401 && options.auth) {
+    endSession();
+    redirectToLogin();
   }
   throw new HttpError(
     response.status,
@@ -42,7 +47,7 @@ export const httpClient = {
     const response = await fetch(`${config.apiUrl}${path}`, {
       headers: buildHeaders(options.auth),
     });
-    if (!response.ok) await parseError(response);
+    if (!response.ok) await parseError(response, options);
     return response.json() as Promise<T>;
   },
 
@@ -52,7 +57,7 @@ export const httpClient = {
       headers: buildHeaders(options.auth),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    if (!response.ok) await parseError(response);
+    if (!response.ok) await parseError(response, options);
     return response.json() as Promise<T>;
   },
 
@@ -62,7 +67,7 @@ export const httpClient = {
       headers: buildHeaders(options.auth),
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
-    if (!response.ok) await parseError(response);
+    if (!response.ok) await parseError(response, options);
     return response.json() as Promise<T>;
   },
 
@@ -71,7 +76,7 @@ export const httpClient = {
       method: 'DELETE',
       headers: buildHeaders(options.auth),
     });
-    if (!response.ok) await parseError(response);
+    if (!response.ok) await parseError(response, options);
     if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
   },

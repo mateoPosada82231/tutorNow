@@ -4,14 +4,18 @@ import co.edu.epi.tutornow.catalog.model.Materia;
 import co.edu.epi.tutornow.common.exception.ConflictException;
 import co.edu.epi.tutornow.common.exception.ForbiddenException;
 import co.edu.epi.tutornow.common.exception.ResourceNotFoundException;
+import co.edu.epi.tutornow.tutorial.dto.AsesoriaResponse;
 import co.edu.epi.tutornow.tutorial.dto.CreateProposalRequest;
 import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.service.PropuestaService;
@@ -51,6 +55,8 @@ class PropuestaServiceTest {
     private PropuestaRepository propuestaRepository;
     @Mock
     private SolicitudAsesoriaRepository solicitudRepository;
+    @Mock
+    private AsesoriaRepository asesoriaRepository;
     @Mock
     private UsuarioRepository usuarioRepository;
     @Mock
@@ -216,6 +222,12 @@ class PropuestaServiceTest {
                     .thenReturn(List.of(otra));
             when(propuestaRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
             when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(10L)).thenReturn(List.of(propia, otra));
+            when(asesoriaRepository.existsBySolicitudId(10L)).thenReturn(false);
+            when(asesoriaRepository.save(any(Asesoria.class))).thenAnswer(inv -> {
+                Asesoria a = inv.getArgument(0);
+                a.setId(11L);
+                return a;
+            });
 
             TutoringRequestResponse response = propuestaService.accept(estudiante.getCorreoElectronico(), 7L);
 
@@ -223,6 +235,59 @@ class PropuestaServiceTest {
             assertThat(otra.getEstado()).isEqualTo(EstadoPropuesta.RECHAZADA);
             assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitud.CONFIRMADA);
             assertThat(response.getEstado()).isEqualTo("CONFIRMADA");
+        }
+
+        @Test
+        @DisplayName("Al aceptar se crea la asesoria con estado PENDIENTE ligada a la propuesta")
+        void creaAsesoriaPendiente() {
+            solicitud.setEstado(EstadoSolicitud.EN_PROCESO);
+            Propuesta propuesta = propuestaDe(tutor);
+            when(propuestaRepository.findById(7L)).thenReturn(Optional.of(propuesta));
+            when(propuestaRepository.findBySolicitudIdAndEstadoOrderByCreatedAtAsc(10L, EstadoPropuesta.PENDIENTE))
+                    .thenReturn(List.of());
+            when(propuestaRepository.save(any(Propuesta.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(propuestaRepository.saveAll(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(solicitudRepository.save(any(SolicitudAsesoria.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(10L)).thenReturn(List.of(propuesta));
+            when(asesoriaRepository.existsBySolicitudId(10L)).thenReturn(false);
+            when(asesoriaRepository.save(any(Asesoria.class))).thenAnswer(inv -> {
+                Asesoria a = inv.getArgument(0);
+                a.setId(11L);
+                return a;
+            });
+
+            TutoringRequestResponse response = propuestaService.accept(estudiante.getCorreoElectronico(), 7L);
+
+            ArgumentCaptor<Asesoria> captor = ArgumentCaptor.forClass(Asesoria.class);
+            verify(asesoriaRepository).save(captor.capture());
+            Asesoria guardada = captor.getValue();
+            assertThat(guardada.getEstado()).isEqualTo(EstadoAsesoria.PENDIENTE);
+            assertThat(guardada.getSolicitud()).isSameAs(solicitud);
+            assertThat(guardada.getPropuesta()).isSameAs(propuesta);
+            assertThat(guardada.getEstudiante()).isSameAs(estudiante);
+            assertThat(guardada.getTutor()).isSameAs(tutor);
+
+            assertThat(response.getAsesoria()).isNotNull();
+            AsesoriaResponse asesoria = response.getAsesoria();
+            assertThat(asesoria.getId()).isEqualTo(11L);
+            assertThat(asesoria.getEstado()).isEqualTo("PENDIENTE");
+            assertThat(asesoria.getPropuestaId()).isEqualTo(7L);
+            assertThat(asesoria.getSolicitudId()).isEqualTo(10L);
+            assertThat(asesoria.getTutor().getFullName()).isEqualTo("Tutor Uno");
+        }
+
+        @Test
+        @DisplayName("Falla si ya existe una asesoria para la solicitud")
+        void noDuplicaAsesoria() {
+            solicitud.setEstado(EstadoSolicitud.EN_PROCESO);
+            Propuesta propuesta = propuestaDe(tutor);
+            when(propuestaRepository.findById(7L)).thenReturn(Optional.of(propuesta));
+            when(asesoriaRepository.existsBySolicitudId(10L)).thenReturn(true);
+
+            assertThatThrownBy(() -> propuestaService.accept(estudiante.getCorreoElectronico(), 7L))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("ya fue seleccionada");
+            verify(propuestaRepository, never()).save(any());
         }
 
         @Test

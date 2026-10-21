@@ -52,6 +52,9 @@ public class TutoringRequestResponse {
     @JsonProperty("propuestas")
     private List<ProposalResponse> propuestas;
 
+    @JsonProperty("asesoria")
+    private AsesoriaResponse asesoria;
+
     @JsonProperty("createdAt")
     private OffsetDateTime createdAt;
 }
