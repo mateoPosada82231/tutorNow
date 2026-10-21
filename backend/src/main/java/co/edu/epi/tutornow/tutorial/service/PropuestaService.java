@@ -3,13 +3,17 @@ package co.edu.epi.tutornow.tutorial.service;
 import co.edu.epi.tutornow.common.exception.ConflictException;
 import co.edu.epi.tutornow.common.exception.ForbiddenException;
 import co.edu.epi.tutornow.common.exception.ResourceNotFoundException;
+import co.edu.epi.tutornow.tutorial.dto.AsesoriaResponse;
 import co.edu.epi.tutornow.tutorial.dto.CreateProposalRequest;
 import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutors.model.Tutor;
@@ -29,6 +33,7 @@ public class PropuestaService {
 
     private final PropuestaRepository propuestaRepository;
     private final SolicitudAsesoriaRepository solicitudRepository;
+    private final AsesoriaRepository asesoriaRepository;
     private final UsuarioRepository usuarioRepository;
     private final TutorRepository tutorRepository;
     private final TutorialMapper mapper;
@@ -84,6 +89,9 @@ public class PropuestaService {
         if (propuesta.getEstado() != EstadoPropuesta.PENDIENTE) {
             throw new ConflictException("La propuesta ya fue procesada");
         }
+        if (asesoriaRepository.existsBySolicitudId(solicitud.getId())) {
+            throw new ConflictException("La asesoria ya fue seleccionada para esta asesoria");
+        }
         propuesta.setEstado(EstadoPropuesta.ACEPTADA);
         propuestaRepository.save(propuesta);
 
@@ -95,11 +103,22 @@ public class PropuestaService {
         solicitud.setEstado(EstadoSolicitud.CONFIRMADA);
         solicitudRepository.save(solicitud);
 
+        Asesoria asesoria = Asesoria.builder()
+                .solicitud(solicitud)
+                .propuesta(propuesta)
+                .estudiante(solicitud.getEstudiante())
+                .tutor(propuesta.getTutor())
+                .estado(EstadoAsesoria.PENDIENTE)
+                .build();
+        asesoria = asesoriaRepository.save(asesoria);
+        AsesoriaResponse asesoriaResponse = mapper.toAsesoriaResponse(asesoria);
+
         List<ProposalResponse> propuestas = propuestaRepository
                 .findBySolicitudIdOrderByCreatedAtAsc(solicitud.getId()).stream()
                 .map(p -> mapper.toProposalResponse(p, false))
                 .toList();
-        return mapper.toSolicitudResponse(solicitud.getEstudiante(), solicitud, propuestas.size(), propuestas, null);
+        return mapper.toSolicitudResponse(
+                solicitud.getEstudiante(), solicitud, propuestas.size(), propuestas, null, asesoriaResponse);
     }
 
     @Transactional

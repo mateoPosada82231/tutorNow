@@ -63,15 +63,13 @@ export default function TutoringRequestsPage() {
               </p>
             </div>
           </div>
-          {!isTutor && (
-            <Link
-              href="/tutoring/requests/new"
-              className="inline-flex min-h-[44px] w-fit items-center justify-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-base font-semibold text-white backdrop-blur-sm transition-colors duration-200 hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Publicar asesoria
-            </Link>
-          )}
+          <Link
+            href="/tutoring/requests/new"
+            className="inline-flex min-h-[44px] w-fit items-center justify-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-base font-semibold text-white backdrop-blur-sm transition-colors duration-200 hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {isTutor ? 'Publicar demanda' : 'Publicar asesoria'}
+          </Link>
         </div>
       </section>
 
@@ -103,14 +101,12 @@ export default function TutoringRequestsPage() {
               ? 'En cuanto los estudiantes publiquen lo que necesitan, lo veras aqui primero si ajustan a tu perfil.'
               : 'Publica tu primera asesoria para que los tutores te envien propuestas.'}
           </p>
-          {!isTutor && (
-            <Link
-              href="/tutoring/requests/new"
-              className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-brand-poli px-4 py-2 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-poli-hover focus:outline-none focus:ring-2 focus:ring-brand-poli"
-            >
-              Publicar asesoria
-            </Link>
-          )}
+          <Link
+            href="/tutoring/requests/new"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-lg bg-brand-poli px-4 py-2 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-poli-hover focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          >
+            {isTutor ? 'Publicar demanda' : 'Publicar asesoria'}
+          </Link>
         </div>
       ) : (
         <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">

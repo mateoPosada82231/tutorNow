@@ -1,10 +1,12 @@
 package co.edu.epi.tutornow.tutorial.service;
 
 import co.edu.epi.tutornow.catalog.dto.CatalogItemResponse;
+import co.edu.epi.tutornow.tutorial.dto.AsesoriaResponse;
 import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutorBriefResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
 import co.edu.epi.tutornow.tutorial.dto.UserBriefResponse;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
 import co.edu.epi.tutornow.tutors.model.Tutor;
@@ -21,7 +23,8 @@ public class TutorialMapper {
             SolicitudAsesoria solicitud,
             long propuestasCount,
             List<ProposalResponse> propuestas,
-            Boolean isProfileMatch) {
+            Boolean isProfileMatch,
+            AsesoriaResponse asesoria) {
         return TutoringRequestResponse.builder()
                 .id(solicitud.getId())
                 .tema(solicitud.getTema())
@@ -41,7 +44,19 @@ public class TutorialMapper {
                 .isOwner(solicitud.getEstudiante().getId().equals(viewer.getId()))
                 .isProfileMatch(isProfileMatch)
                 .propuestas(propuestas)
+                .asesoria(asesoria)
                 .createdAt(solicitud.getCreatedAt())
+                .build();
+    }
+
+    public AsesoriaResponse toAsesoriaResponse(Asesoria asesoria) {
+        return AsesoriaResponse.builder()
+                .id(asesoria.getId())
+                .solicitudId(asesoria.getSolicitud().getId())
+                .propuestaId(asesoria.getPropuesta().getId())
+                .estado(asesoria.getEstado().name())
+                .tutor(toTutorBrief(asesoria.getTutor()))
+                .createdAt(asesoria.getCreatedAt())
                 .build();
     }
 

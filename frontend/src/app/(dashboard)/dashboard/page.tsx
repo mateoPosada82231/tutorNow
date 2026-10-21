@@ -96,19 +96,21 @@ export default function DashboardPage() {
           />
         )}
         <ActionCard
+          href="/tutoring/requests"
+          icon={CalendarClock}
+          title="Asesorias"
+          description={
+            isTutor
+              ? 'Revisa las solicitudes de los estudiantes y publica tus propias demandas.'
+              : 'Publica lo que necesitas, recibe propuestas y acepta a tu tutor ideal.'
+          }
+        />
+        <ActionCard
           href="/settings/password"
           icon={KeyRound}
           title="Seguridad"
           description="Cambia tu contrasena de forma segura en dos pasos."
         />
-        {!isTutor && (
-          <ActionCard
-            icon={CalendarClock}
-            title="Asesorias"
-            description="Agenda y gestiona tus asesorias academicas. Disponible en el proximo sprint."
-            soon
-          />
-        )}
       </section>
 
       <section className="rounded-2xl border border-dashed border-border-color p-6 md:p-8">

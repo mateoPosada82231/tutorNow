@@ -49,8 +49,8 @@ public class SolicitudService {
     @Transactional
     public TutoringRequestResponse create(String correo, CreateTutoringRequest request) {
         Usuario usuario = findUsuario(correo);
-        if (usuario.getRol() != Rol.ESTUDIANTE) {
-            throw new ForbiddenException("Solo los estudiantes pueden publicar asesorias");
+        if (usuario.getRol() == Rol.ADMIN) {
+            throw new ForbiddenException("Los administradores no pueden publicar asesorias");
         }
         Materia materia = materiaRepository.findById(request.getMateriaId())
                 .filter(Materia::isActiva)
@@ -68,7 +68,7 @@ public class SolicitudService {
                 .estado(EstadoSolicitud.PUBLICADA)
                 .build();
         solicitud = solicitudRepository.save(solicitud);
-        return mapper.toSolicitudResponse(usuario, solicitud, 0L, List.of(), null);
+        return mapper.toSolicitudResponse(usuario, solicitud, 0L, List.of(), null, null);
     }
 
     @Transactional(readOnly = true)
@@ -112,7 +112,8 @@ public class SolicitudService {
                         s,
                         conteos.getOrDefault(s.getId(), 0L),
                         List.of(),
-                        usuario.getRol() == Rol.TUTOR ? materiasTutorFinal.contains(s.getMateria().getId()) : null))
+                        usuario.getRol() == Rol.TUTOR ? materiasTutorFinal.contains(s.getMateria().getId()) : null,
+                        null))
                 .toList();
 
         return PageResponse.<TutoringRequestResponse>builder()
@@ -132,7 +133,8 @@ public class SolicitudService {
         SolicitudAsesoria solicitud = findSolicitud(id);
         checkAccess(usuario, solicitud);
         List<ProposalResponse> propuestas = loadPropuestas(usuario, solicitud);
-        return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas, profileMatch(usuario, solicitud));
+        return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas,
+                profileMatch(usuario, solicitud), null);
     }
 
     @Transactional(readOnly = true)
@@ -164,7 +166,7 @@ public class SolicitudService {
         propuestaRepository.saveAll(pendientes);
 
         List<ProposalResponse> propuestas = loadPropuestas(usuario, solicitud);
-        return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas, null);
+        return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas, null, null);
     }
 
     private List<ProposalResponse> loadPropuestas(Usuario viewer, SolicitudAsesoria solicitud) {

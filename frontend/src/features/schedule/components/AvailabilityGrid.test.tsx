@@ -85,4 +85,34 @@ describe('AvailabilityGrid', () => {
 
     expect(onToggle).not.toHaveBeenCalled();
   });
+
+  it('los cuadrados no disponibles usan un fondo oscurecido para diferenciarse del fondo', () => {
+    render(
+      <AvailabilityGrid
+        available={new Set([buildSlotKey('LUNES', 8)])}
+        readOnly={false}
+      />,
+    );
+
+    expect(cell(/lun 08:00/).className).toContain('bg-brand-poli');
+    expect(cell(/mar 08:00/).className).toContain('bg-border-color');
+    expect(cell(/mar 08:00/).className).not.toContain('bg-bg-primary');
+  });
+
+  it('los cuadrados no disponibles tambien se oscurecen en modo de solo lectura', () => {
+    render(<AvailabilityGrid available={new Set([buildSlotKey('LUNES', 8)])} readOnly />);
+
+    expect(cell(/lun 08:00/).className).toContain('bg-brand-poli');
+    expect(cell(/mar 08:00/).className).toContain('bg-border-color');
+  });
+
+  it('en modo compacto las celdas son mas pequenas y se omiten las fechas', () => {
+    render(<AvailabilityGrid available={new Set([buildSlotKey('LUNES', 8)])} compact readOnly />);
+
+    expect(cell(/lun 08:00/).className).toContain('h-8');
+    expect(screen.getByText('Lun')).toBeInTheDocument();
+    expect(screen.getByRole('grid')).toBeInTheDocument();
+
+    expect(cell(/lun 08:00/)).toHaveAttribute('aria-pressed', 'true');
+  });
 });

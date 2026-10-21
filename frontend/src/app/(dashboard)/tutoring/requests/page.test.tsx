@@ -69,7 +69,10 @@ describe('TutoringRequestsPage', () => {
     expect(
       screen.getByText(/aqui van primero las que ajustan a tu perfil/i),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /publicar asesoria/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /publicar demanda/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests/new',
+    );
   });
 
   it('muestra el estado vacio propio cuando el estudiante no ha publicado', async () => {

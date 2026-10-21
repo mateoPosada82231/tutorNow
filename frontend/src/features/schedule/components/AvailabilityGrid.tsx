@@ -54,10 +54,16 @@ const dateFormatter = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 
 interface AvailabilityGridProps {
   available: ReadonlySet<string>;
   readOnly?: boolean;
+  compact?: boolean;
   onToggle?: (diaSemana: string, hora: number, value: boolean) => void;
 }
 
-export function AvailabilityGrid({ available, readOnly = false, onToggle }: AvailabilityGridProps) {
+export function AvailabilityGrid({
+  available,
+  readOnly = false,
+  compact = false,
+  onToggle,
+}: AvailabilityGridProps) {
   const draggingRef = useRef(false);
   const dragValueRef = useRef(false);
 
@@ -88,46 +94,69 @@ export function AvailabilityGrid({ available, readOnly = false, onToggle }: Avai
     onToggle(diaSemana, hora, dragValueRef.current);
   };
 
-  const cellBase =
-    'h-11 w-full rounded-md border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli';
+  const cellBase = `w-full rounded-md border transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli ${
+    compact ? 'h-8' : 'h-11'
+  }`;
 
   const cellState = (isAvailable: boolean) => {
     if (isAvailable) {
       return 'border-brand-poli bg-brand-poli';
     }
     if (readOnly) {
-      return 'border-border-color bg-bg-primary';
+      return 'border-border-color bg-border-color';
     }
-    return 'border-border-color bg-bg-primary hover:border-brand-poli hover:bg-brand-poli/20 cursor-pointer';
+    return 'border-border-color bg-border-color hover:border-brand-poli hover:bg-brand-poli/20 cursor-pointer';
   };
 
   return (
-    <div className="select-none rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-colors duration-200 md:p-6">
+    <div
+      className={`select-none rounded-2xl border border-border-color bg-bg-surface shadow-sm transition-colors duration-200 ${
+        compact ? 'p-3 md:p-4' : 'p-4 md:p-6'
+      }`}
+    >
       <div className="overflow-x-auto">
-        <div className="min-w-[42rem]">
+        <div className={compact ? 'min-w-[24rem]' : 'min-w-[42rem]'}>
           <div
-            className="grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] gap-1.5"
+            className={`grid gap-1.5 ${
+              compact
+                ? 'grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] gap-1'
+                : 'grid-cols-[3.5rem_repeat(7,minmax(0,1fr))]'
+            }`}
             role="grid"
             aria-label="Cuadricula de disponibilidad semanal"
           >
             <div aria-hidden="true" />
-            {WEEK_DAYS.map((dia, index) => (
+            {WEEK_DAYS.map((dia) => (
               <div
                 key={dia}
-                className="flex flex-col items-center justify-center gap-0.5 pb-2 text-center"
+                className={`flex flex-col items-center justify-center pb-2 text-center ${
+                  compact ? '' : 'gap-0.5'
+                }`}
               >
-                <span className="text-xs font-semibold uppercase tracking-wide text-text-main">
+                <span
+                  className={`font-semibold uppercase tracking-wide text-text-main ${
+                    compact ? 'text-[10px]' : 'text-xs'
+                  }`}
+                >
                   {DAY_LABELS[dia]}
                 </span>
-                <span className="text-xs text-text-muted" suppressHydrationWarning>
-                  {weekDates[index] ? dateFormatter.format(weekDates[index]) : ''}
-                </span>
+                {!compact && (
+                  <span className="text-xs text-text-muted" suppressHydrationWarning>
+                    {weekDates[WEEK_DAYS.indexOf(dia)]
+                      ? dateFormatter.format(weekDates[WEEK_DAYS.indexOf(dia)])
+                      : ''}
+                  </span>
+                )}
               </div>
             ))}
 
             {HOUR_SLOTS.map((hora) => (
               <div key={hora} className="col-span-8 grid grid-cols-subgrid">
-                <div className="flex items-center justify-end pr-2 text-xs font-medium text-text-muted">
+                <div
+                  className={`flex items-center justify-end pr-2 font-medium text-text-muted ${
+                    compact ? 'text-[10px]' : 'text-xs'
+                  }`}
+                >
                   {formatHour(hora)}
                 </div>
                 {WEEK_DAYS.map((dia) => {
@@ -159,7 +188,7 @@ export function AvailabilityGrid({ available, readOnly = false, onToggle }: Avai
         </span>
         <span className="flex items-center gap-2">
           <span
-            className="h-3.5 w-3.5 rounded-sm border border-border-color bg-bg-primary"
+            className="h-3.5 w-3.5 rounded-sm border border-border-color bg-border-color"
             aria-hidden="true"
           />
           No disponible

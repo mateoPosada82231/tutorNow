@@ -122,16 +122,45 @@ class SolicitudServiceTest {
         }
 
         @Test
-        @DisplayName("Rechaza a un tutor que intenta publicar")
-        void rechazaTutor() {
-            Usuario tutor = Usuario.builder().id(2L).rol(Rol.TUTOR).build();
-            when(usuarioRepository.findByCorreoElectronico("tutor@elpoli.edu.co")).thenReturn(Optional.of(tutor));
+        @DisplayName("Un tutor tambien puede publicar una demanda, incluso de materias que no asesora")
+        void tutorPublica() {
+            Usuario tutor = Usuario.builder().id(2L)
+                    .correoElectronico("tutor@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno")
+                    .rol(Rol.TUTOR).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutor));
+            when(materiaRepository.findById(1L)).thenReturn(Optional.of(materiaCalculo));
+            when(solicitudRepository.save(any(SolicitudAsesoria.class)))
+                    .thenAnswer(inv -> {
+                        SolicitudAsesoria s = inv.getArgument(0);
+                        s.setId(10L);
+                        return s;
+                    });
 
-            assertThatThrownBy(() -> solicitudService.create("tutor@elpoli.edu.co",
+            TutoringRequestResponse response = solicitudService.create("tutor@elpoli.edu.co",
+                    CreateTutoringRequest.builder().materiaId(1L).tema("Derivadas parciales")
+                            .modalidad("VIRTUAL").disponibilidad("Sabados manana").build());
+
+            ArgumentCaptor<SolicitudAsesoria> captor = ArgumentCaptor.forClass(SolicitudAsesoria.class);
+            verify(solicitudRepository).save(captor.capture());
+            assertThat(captor.getValue().getEstado()).isEqualTo(EstadoSolicitud.PUBLICADA);
+            assertThat(captor.getValue().getEstudiante()).isSameAs(tutor);
+            assertThat(response.isOwner()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Un administrador no puede publicar")
+        void rechazaAdmin() {
+            Usuario admin = Usuario.builder().id(3L).rol(Rol.ADMIN).build();
+            when(usuarioRepository.findByCorreoElectronico("admin@elpoli.edu.co"))
+                    .thenReturn(Optional.of(admin));
+
+            assertThatThrownBy(() -> solicitudService.create("admin@elpoli.edu.co",
                     CreateTutoringRequest.builder().materiaId(1L).tema("Tema valido aqui")
                             .modalidad("VIRTUAL").disponibilidad("Sabados manana").build()))
                     .isInstanceOf(ForbiddenException.class)
-                    .hasMessageContaining("Solo los estudiantes");
+                    .hasMessageContaining("Los administradores");
             verify(solicitudRepository, never()).save(any());
         }
 

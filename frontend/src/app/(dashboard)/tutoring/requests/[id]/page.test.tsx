@@ -69,8 +69,7 @@ describe('TutoringRequestDetailPage', () => {
     expect(chatButton).toBeDisabled();
   });
 
-  it('habilita el chat en asesorias confirmadas y muestra el aviso al hacer clic', async () => {
-    const user = userEvent.setup();
+  it('habilita el chat en asesorias confirmadas y muestra el aviso al hacer clic', async () => {    const user = userEvent.setup();
     vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
       buildRequest({
         estado: 'CONFIRMADA',
@@ -102,6 +101,48 @@ describe('TutoringRequestDetailPage', () => {
     expect(
       await screen.findByText(/el chat estara disponible proximamente/i),
     ).toBeInTheDocument();
+  });
+
+  it('muestra el badge de la asesoria creada en estado pendiente al confirmar', async () => {
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        propuestasCount: 1,
+        propuestas: [
+          {
+            id: 10,
+            solicitudId: 1,
+            mensaje: 'Puedo ayudarte con la tarea 3',
+            estado: 'ACEPTADA',
+            tutor: {
+              id: 3,
+              fullName: 'Carlos Gomez',
+              biografia: 'Tutor de matematicas',
+              materias: [{ id: 1, label: 'Matematicas II' }],
+            },
+            isMine: false,
+            createdAt: '2026-10-02T10:00:00',
+          },
+        ],
+        asesoria: {
+          id: 11,
+          solicitudId: 1,
+          propuestaId: 10,
+          estado: 'PENDIENTE',
+          tutor: {
+            id: 3,
+            fullName: 'Carlos Gomez',
+            biografia: 'Tutor de matematicas',
+            materias: [{ id: 1, label: 'Matematicas II' }],
+          },
+          createdAt: '2026-10-02T11:00:00',
+        },
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByText(/asesoria #11/i)).toBeInTheDocument();
+    expect(screen.getByText(/pendiente/i)).toBeInTheDocument();
   });
 
   it('muestra el boton de cancelar al dueno con la asesoria activa', async () => {
@@ -141,6 +182,38 @@ describe('TutoringRequestDetailPage', () => {
     expect(await screen.findByText('Carlos Gomez')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /aceptar/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /rechazar/i })).toBeEnabled();
+  });
+
+  it('permite a un tutor dueño de la demanda aceptar propuestas', async () => {
+    useAuthStore.setState({
+      user: { id: 3, email: 'tutor@elpoli.edu.co', fullName: 'Carlos Gomez', role: 'TUTOR' },
+    });
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'EN_PROCESO',
+        propuestasCount: 1,
+        propuestas: [
+          {
+            id: 10,
+            solicitudId: 1,
+            mensaje: 'Puedo ayudarte con la tarea 3',
+            estado: 'PENDIENTE',
+            tutor: {
+              id: 4,
+              fullName: 'Laura Ruiz',
+              biografia: 'Tutoria de quimica',
+              materias: [{ id: 2, label: 'Quimica I' }],
+            },
+            isMine: false,
+            createdAt: '2026-10-02T10:00:00',
+          },
+        ],
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByText('Laura Ruiz')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /aceptar/i })).toBeEnabled();
   });
 
   it('muestra el formulario de propuesta a un tutor que aun no ha propuesto', async () => {

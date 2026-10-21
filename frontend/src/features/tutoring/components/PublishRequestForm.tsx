@@ -164,7 +164,7 @@ export function PublishRequestForm() {
           minLength={5}
           maxLength={300}
           rows={3}
-          placeholder="Lunes y miercoles 2-4pm, sabados manana"
+          placeholder="Cuentale a los tutores tu disponibilidad horaria"
           value={disponibilidad}
           onChange={(e) => {
             setDisponibilidad(e.target.value);
