@@ -29,6 +29,15 @@ public class AsesoriaResponse {
     @JsonProperty("tutor")
     private TutorBriefResponse tutor;
 
+    @JsonProperty("confirmadaEstudiante")
+    private boolean confirmadaEstudiante;
+
+    @JsonProperty("confirmadaTutor")
+    private boolean confirmadaTutor;
+
+    @JsonProperty("finalizadaAt")
+    private OffsetDateTime finalizadaAt;
+
     @JsonProperty("createdAt")
     private OffsetDateTime createdAt;
 }

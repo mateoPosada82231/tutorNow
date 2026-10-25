@@ -56,6 +56,15 @@ public class Asesoria {
     @Column(name = "estado", nullable = false, length = 20)
     private EstadoAsesoria estado;
 
+    @Column(name = "confirmacion_estudiante_at")
+    private OffsetDateTime confirmacionEstudianteAt;
+
+    @Column(name = "confirmacion_tutor_at")
+    private OffsetDateTime confirmacionTutorAt;
+
+    @Column(name = "finalizada_at")
+    private OffsetDateTime finalizadaAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
