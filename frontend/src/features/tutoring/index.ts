@@ -13,6 +13,7 @@ export type {
 } from './types';
 export {
   fetchCatalogoMaterias,
+  fetchAcceptedTutoringRequests,
   fetchTutoringRequest,
   fetchTutoringRequests,
   createTutoringRequest,
@@ -22,6 +23,7 @@ export {
   acceptProposal,
   rejectProposal,
 } from './api/tutoringApi';
+export { AcceptedRequestCard } from './components/AcceptedRequestCard';
 export { ProposalCard } from './components/ProposalCard';
 export { PublishRequestForm } from './components/PublishRequestForm';
 export { RequestCard } from './components/RequestCard';

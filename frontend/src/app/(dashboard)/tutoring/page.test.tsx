@@ -41,7 +41,7 @@ describe('TutorPanelPage', () => {
 
     expect(screen.getByRole('heading', { name: /panel de tutor/i })).toBeInTheDocument();
     expect(screen.getByText(/solicitudes recibidas/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /mi agenda/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /disponibilidad y asesor/i })).toHaveAttribute(
       'href',
       '/tutoring/agenda',
     );

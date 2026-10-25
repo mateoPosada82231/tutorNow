@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { GraduationCap, Pencil, X } from 'lucide-react';
+import { GraduationCap, Pencil, X, CalendarCheck2 } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -15,6 +15,11 @@ import {
   WEEK_DAYS,
   type TutorSlot,
 } from '@/features/schedule';
+import {
+  AcceptedRequestCard,
+  fetchAcceptedTutoringRequests,
+} from '@/features/tutoring';
+import type { TutoringRequest } from '@/features/tutoring/types';
 import { HttpError } from '@/lib/httpClient';
 
 function parseSlotKey(key: string): { diaSemana: string; horaInicio: string } | null {
@@ -45,6 +50,11 @@ export default function TutorAgendaPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const [accepted, setAccepted] = useState<TutoringRequest[]>([]);
+  const [acceptedTotal, setAcceptedTotal] = useState(0);
+  const [acceptedLoading, setAcceptedLoading] = useState(true);
+  const [acceptedError, setAcceptedError] = useState<string | null>(null);
+
   const loadSlots = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -71,10 +81,33 @@ export default function TutorAgendaPage() {
     }
   }, []);
 
+  const loadAccepted = useCallback(async () => {
+    setAcceptedLoading(true);
+    setAcceptedError(null);
+    try {
+      const page = await fetchAcceptedTutoringRequests();
+      setAccepted(page.data);
+      setAcceptedTotal(page.pagination.totalElements);
+    } catch (err) {
+      setAcceptedError(
+        err instanceof Error
+          ? err.message
+          : 'No pudimos cargar tus asesorías aceptadas. Intenta de nuevo.',
+      );
+    } finally {
+      setAcceptedLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (isTutor) void loadSlots();
-    else setLoading(false);
-  }, [isTutor, loadSlots]);
+    if (isTutor) {
+      void loadSlots();
+      void loadAccepted();
+    } else {
+      setLoading(false);
+      setAcceptedLoading(false);
+    }
+  }, [isTutor, loadSlots, loadAccepted]);
 
   const handleToggle = (diaSemana: string, hora: number, value: boolean) => {
     setSuccess(null);
@@ -187,14 +220,14 @@ export default function TutorAgendaPage() {
         <div className="relative flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div className="flex flex-col gap-3">
             <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-              Disponibilidad semanal
+              Tutor
             </span>
             <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Mi agenda</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">Disponibilidad y asesorías</h1>
               <p className="mt-2 max-w-xl text-sm text-white/90 md:text-base">
                 {editMode
                   ? 'Haz clic en un bloque para marcarlo como disponible. Arrastra sobre varios bloques para marcarlos mas rapido.'
-                  : 'Estos son los bloques de horas que los estudiantes pueden reservar para sus asesorias.'}
+                  : 'Configura tu disponibilidad semanal y consulta las asesorías que los estudiantes ya aceptaron.'}
               </p>
             </div>
           </div>
@@ -266,6 +299,62 @@ export default function TutorAgendaPage() {
       ) : (
         <AvailabilityGrid available={available} readOnly={!editMode} onToggle={handleToggle} />
       )}
+
+      <section aria-labelledby="asesorias-aceptadas" className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id="asesorias-aceptadas" className="text-lg font-semibold text-text-main">
+              Asesorías aceptadas
+            </h2>
+            <p className="mt-1 text-sm text-text-muted">
+              Asesorías confirmadas en las que tu propuesta fue la elegida.
+            </p>
+          </div>
+          {!acceptedLoading && !acceptedError && acceptedTotal > 0 && (
+            <span className="inline-flex items-center rounded-full bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+              {acceptedTotal === 1 ? '1 asesoría' : `${acceptedTotal} asesorías`}
+            </span>
+          )}
+        </div>
+
+        {acceptedLoading ? (
+          <div className="flex justify-center py-8">
+            <Spinner />
+          </div>
+        ) : acceptedError ? (
+          <div className="flex flex-col gap-3">
+            <Alert type="error">{acceptedError}</Alert>
+            <button
+              type="button"
+              onClick={() => void loadAccepted()}
+              className="inline-flex min-h-[44px] w-fit items-center justify-center rounded-lg bg-brand-poli px-4 py-2 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-poli-hover focus:outline-none focus:ring-2 focus:ring-brand-poli"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : accepted.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-color bg-bg-surface p-8 text-center transition-colors duration-200">
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-success/10 text-success">
+              <CalendarCheck2 className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <h3 className="text-base font-semibold text-text-main">
+              Aún no tienes asesorías aceptadas
+            </h3>
+            <p className="max-w-md text-sm text-text-muted">
+              Cuando un estudiante acepte tu propuesta, la verás aquí con todos los detalles de la
+              asesoría.
+            </p>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {accepted.map((request) => (
+              <li key={request.id}>
+                <AcceptedRequestCard request={request} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

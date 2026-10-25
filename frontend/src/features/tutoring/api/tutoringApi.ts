@@ -28,6 +28,17 @@ export function fetchTutoringRequest(id: number): Promise<TutoringRequest> {
   return httpClient.get<TutoringRequest>(`/tutoring-requests/${id}`, { auth: true });
 }
 
+export function fetchAcceptedTutoringRequests(
+  page = 0,
+  size = 20,
+): Promise<Page<TutoringRequest>> {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  return httpClient.get<Page<TutoringRequest>>(
+    `/tutoring-requests/accepted?${params.toString()}`,
+    { auth: true },
+  );
+}
+
 export function createTutoringRequest(data: TutoringRequestRequest): Promise<TutoringRequest> {
   return httpClient.post<TutoringRequest>('/tutoring-requests', data, { auth: true });
 }
