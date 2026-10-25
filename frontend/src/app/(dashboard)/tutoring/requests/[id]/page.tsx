@@ -16,7 +16,12 @@ import {
   fetchTutoringRequest,
   rejectProposal,
 } from '@/features/tutoring/api/tutoringApi';
-import type { Proposal, SolicitudEstado, TutoringRequest } from '@/features/tutoring/types';
+import type {
+  AsesoriaEstado,
+  Proposal,
+  SolicitudEstado,
+  TutoringRequest,
+} from '@/features/tutoring/types';
 import { validateMensaje } from '@/features/tutoring/hooks/validation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { HttpError } from '@/lib/httpClient';
@@ -38,6 +43,10 @@ const estadoLabels: Record<SolicitudEstado, string> = {
 const modalidadLabels: Record<TutoringRequest['modalidad'], string> = {
   VIRTUAL: 'Virtual',
   PRESENCIAL: 'Presencial',
+};
+
+const asesoriaEstadoLabels: Record<AsesoriaEstado, string> = {
+  PENDIENTE: 'Pendiente',
 };
 
 export default function TutoringRequestDetailPage() {
@@ -310,13 +319,15 @@ export default function TutoringRequestDetailPage() {
 
       {actionError ? <Alert type="error">{actionError}</Alert> : null}
 
-      {request.estado === 'CONFIRMADA' && acceptedProposal && (
+      {request.estado === 'CONFIRMADA' &&
+        acceptedProposal &&
+        (isOwner || acceptedProposal.isMine) && (
         <section aria-label="Propuesta aceptada" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-text-main">Propuesta aceptada</h2>
             {request.asesoria && (
               <span className="inline-flex items-center gap-2 rounded-full bg-brand-accent/20 px-3 py-0.5 text-xs font-semibold text-text-main">
-                Asesoria #{request.asesoria.id} · Pendiente
+                Asesoria #{request.asesoria.id} · {asesoriaEstadoLabels[request.asesoria.estado]}
               </span>
             )}
           </div>

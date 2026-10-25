@@ -145,6 +145,88 @@ describe('TutoringRequestDetailPage', () => {
     expect(screen.getByText(/pendiente/i)).toBeInTheDocument();
   });
 
+  it('no muestra la propuesta aceptada a un tutor que no fue elegido', async () => {
+    useAuthStore.setState({
+      user: { id: 3, email: 'tutor@elpoli.edu.co', fullName: 'Carlos Gomez', role: 'TUTOR' },
+    });
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        isOwner: false,
+        propuestasCount: 2,
+        propuestas: [
+          {
+            id: 12,
+            solicitudId: 1,
+            mensaje: 'Mi propuesta que no fue elegida',
+            estado: 'RECHAZADA',
+            tutor: {
+              id: 3,
+              fullName: 'Carlos Gomez',
+              biografia: 'Tutor de matematicas',
+              materias: [{ id: 1, label: 'Matematicas II' }],
+            },
+            isMine: true,
+            createdAt: '2026-10-02T10:00:00',
+          },
+        ],
+        asesoria: null,
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByRole('heading', { name: /ecuaciones diferenciales/i })).toBeInTheDocument();
+    expect(screen.queryByText(/propuesta aceptada/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/asesoria #/i)).not.toBeInTheDocument();
+  });
+
+  it('muestra la propuesta aceptada al tutor que la gano', async () => {
+    useAuthStore.setState({
+      user: { id: 3, email: 'tutor@elpoli.edu.co', fullName: 'Carlos Gomez', role: 'TUTOR' },
+    });
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        isOwner: false,
+        propuestasCount: 1,
+        propuestas: [
+          {
+            id: 10,
+            solicitudId: 1,
+            mensaje: 'Puedo ayudarte con la tarea 3',
+            estado: 'ACEPTADA',
+            tutor: {
+              id: 3,
+              fullName: 'Carlos Gomez',
+              biografia: 'Tutor de matematicas',
+              materias: [{ id: 1, label: 'Matematicas II' }],
+            },
+            isMine: true,
+            createdAt: '2026-10-02T10:00:00',
+          },
+        ],
+        asesoria: {
+          id: 11,
+          solicitudId: 1,
+          propuestaId: 10,
+          estado: 'PENDIENTE',
+          tutor: {
+            id: 3,
+            fullName: 'Carlos Gomez',
+            biografia: 'Tutor de matematicas',
+            materias: [{ id: 1, label: 'Matematicas II' }],
+          },
+          createdAt: '2026-10-02T11:00:00',
+        },
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByText(/propuesta aceptada/i)).toBeInTheDocument();
+    expect(screen.getByText(/asesoria #11/i)).toBeInTheDocument();
+    expect(screen.getByText(/pendiente/i)).toBeInTheDocument();
+  });
+
   it('muestra el boton de cancelar al dueno con la asesoria activa', async () => {
     vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
       buildRequest({ estado: 'PUBLICADA' }),
