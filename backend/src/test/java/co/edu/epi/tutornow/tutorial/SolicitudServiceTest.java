@@ -401,6 +401,152 @@ class SolicitudServiceTest {
         }
     }
 
+    @Nested
+    @DisplayName("Visibilidad de propuestas y asesoria")
+    class VisibilidadPropuestas {
+
+        @Test
+        @DisplayName("Un tutor no aceptado solo ve su propia propuesta y no la asesoria")
+        void tutorNoAceptadoSoloVeSuPropuesta() {
+            Usuario viewer = Usuario.builder().id(3L)
+                    .correoElectronico("juana_tutor2@elpoli.edu.co")
+                    .nombreCompleto("Juana Gomez").rol(Rol.TUTOR).build();
+            Tutor tutorAceptado = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Tutor tutorViewer = Tutor.builder().id(6L).usuario(viewer)
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutorAceptado).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Propuesta propia = Propuesta.builder()
+                    .id(8L).solicitud(solicitud).tutor(tutorViewer).mensaje("Mi propuesta")
+                    .estado(EstadoPropuesta.RECHAZADA).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(viewer));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada, propia));
+            when(tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorViewer));
+
+            TutoringRequestResponse response = solicitudService.getById(viewer.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(1);
+            assertThat(response.getPropuestas().get(0).isMine()).isTrue();
+            assertThat(response.getPropuestas().get(0).getEstado()).isEqualTo("RECHAZADA");
+            assertThat(response.getPropuestas())
+                    .noneMatch(p -> p.getTutor().getFullName().equals("Tutor Uno"));
+            assertThat(response.getAsesoria()).isNull();
+            verify(asesoriaRepository, never()).findBySolicitudId(any());
+        }
+
+        @Test
+        @DisplayName("El tutor aceptado ve todas las propuestas y su asesoria")
+        void tutorAceptadoVeTodasYSuAsesoria() {
+            Usuario viewer = Usuario.builder().id(2L)
+                    .correoElectronico("andres_tutor1@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build();
+            Tutor aceptado = Tutor.builder().id(5L).usuario(viewer)
+                    .materias(Set.of(materiaCalculo)).build();
+            Tutor otro = Tutor.builder().id(6L)
+                    .usuario(Usuario.builder().id(3L).nombreCompleto("Tutor Dos").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(aceptado).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Propuesta rechazada = Propuesta.builder()
+                    .id(8L).solicitud(solicitud).tutor(otro).mensaje("Otra propuesta")
+                    .estado(EstadoPropuesta.RECHAZADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(aceptado)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(viewer));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada, rechazada));
+            when(tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(aceptado));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            TutoringRequestResponse response = solicitudService.getById(viewer.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(2);
+            assertThat(response.getPropuestas())
+                    .anyMatch(p -> p.isMine() && "ACEPTADA".equals(p.getEstado()));
+            assertThat(response.getAsesoria()).isNotNull();
+            assertThat(response.getAsesoria().getTutor().getFullName()).isEqualTo("Tutor Uno");
+        }
+
+        @Test
+        @DisplayName("Un tutor que publico la demanda (dueno) ve todas las propuestas")
+        void tutorDuenoVeTodas() {
+            Usuario tutorDueno = Usuario.builder().id(3L)
+                    .correoElectronico("tutor_dueno@elpoli.edu.co")
+                    .nombreCompleto("Tutor Dueno").rol(Rol.TUTOR).build();
+            Tutor otro = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = SolicitudAsesoria.builder()
+                    .id(1L).estudiante(tutorDueno).materia(materiaCalculo)
+                    .tema("Derivadas parciales").modalidad(Modalidad.VIRTUAL)
+                    .disponibilidad("Lunes y miercoles 2-4pm")
+                    .estado(EstadoSolicitud.EN_PROCESO).createdAt(OffsetDateTime.now()).build();
+            Propuesta propuesta = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(otro).mensaje("Puedo ayudarte")
+                    .estado(EstadoPropuesta.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(tutorDueno.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorDueno));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(propuesta));
+
+            TutoringRequestResponse response = solicitudService
+                    .getById(tutorDueno.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(1);
+            assertThat(response.getPropuestas().get(0).isMine()).isFalse();
+            assertThat(response.getPropuestas().get(0).getTutor().getFullName()).isEqualTo("Tutor Uno");
+        }
+
+        @Test
+        @DisplayName("El estudiante dueño ve todas las propuestas y la asesoria")
+        void duenoVeTodasYSuAsesoria() {
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Tutor tutor = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Propuesta rechazada = Propuesta.builder()
+                    .id(8L).solicitud(solicitud).tutor(tutor).mensaje("Otra propuesta")
+                    .estado(EstadoPropuesta.RECHAZADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada, rechazada));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            TutoringRequestResponse response = solicitudService
+                    .getById(estudiante.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(2);
+            assertThat(response.getPropuestas()).allMatch(p -> !p.isMine());
+            assertThat(response.getAsesoria()).isNotNull();
+            assertThat(response.getAsesoria().getId()).isEqualTo(20L);
+        }
+    }
+
     private SolicitudAsesoria solicitudDeEstudiante(Long id, EstadoSolicitud estado) {
         return SolicitudAsesoria.builder()
                 .id(id)

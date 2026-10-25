@@ -178,8 +178,12 @@ public class SolicitudService {
         SolicitudAsesoria solicitud = findSolicitud(id);
         checkAccess(usuario, solicitud);
         List<ProposalResponse> propuestas = loadPropuestas(usuario, solicitud);
+        Asesoria asesoria = puedeVerAsesoria(usuario, solicitud, propuestas)
+                ? asesoriaRepository.findBySolicitudId(solicitud.getId()).orElse(null)
+                : null;
         return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas,
-                profileMatch(usuario, solicitud), null);
+                profileMatch(usuario, solicitud),
+                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria));
     }
 
     @Transactional(readOnly = true)
@@ -215,14 +219,37 @@ public class SolicitudService {
     }
 
     private List<ProposalResponse> loadPropuestas(Usuario viewer, SolicitudAsesoria solicitud) {
-        Long tutorIdViewer = viewer.getRol() == Rol.TUTOR
-                ? tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico())
-                        .map(Tutor::getId)
-                        .orElse(null)
-                : null;
-        return propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(solicitud.getId()).stream()
+        List<Propuesta> propuestas = propuestaRepository
+                .findBySolicitudIdOrderByCreatedAtAsc(solicitud.getId());
+        boolean owner = solicitud.getEstudiante().getId().equals(viewer.getId());
+        if (owner || viewer.getRol() != Rol.TUTOR) {
+            return propuestas.stream()
+                    .map(p -> mapper.toProposalResponse(p, false))
+                    .toList();
+        }
+        Long tutorIdViewer = tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico())
+                .map(Tutor::getId)
+                .orElse(null);
+        if (tutorIdViewer == null) {
+            return List.of();
+        }
+        Long tutorAceptadoId = propuestas.stream()
+                .filter(p -> p.getEstado() == EstadoPropuesta.ACEPTADA)
+                .map(p -> p.getTutor().getId())
+                .findFirst()
+                .orElse(null);
+        boolean veTodas = tutorIdViewer.equals(tutorAceptadoId);
+        return propuestas.stream()
+                .filter(p -> veTodas || p.getTutor().getId().equals(tutorIdViewer))
                 .map(p -> mapper.toProposalResponse(p, p.getTutor().getId().equals(tutorIdViewer)))
                 .toList();
+    }
+
+    private boolean puedeVerAsesoria(Usuario viewer, SolicitudAsesoria solicitud, List<ProposalResponse> propuestas) {
+        boolean owner = solicitud.getEstudiante().getId().equals(viewer.getId());
+        boolean tutorAceptado = viewer.getRol() == Rol.TUTOR
+                && propuestas.stream().anyMatch(p -> p.isMine() && "ACEPTADA".equals(p.getEstado()));
+        return owner || tutorAceptado;
     }
 
     private Boolean profileMatch(Usuario viewer, SolicitudAsesoria solicitud) {
