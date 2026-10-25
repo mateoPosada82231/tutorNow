@@ -30,6 +30,9 @@ function buildRequest(overrides: Partial<TutoringRequest> = {}): TutoringRequest
       solicitudId: 3,
       propuestaId: 9,
       estado: 'PENDIENTE',
+      confirmadaEstudiante: false,
+      confirmadaTutor: false,
+      finalizadaAt: null,
       tutor: { id: 5, fullName: 'Tutor User', biografia: '', materias: [] },
       createdAt: '2026-10-20T10:00:00Z',
     },
@@ -44,14 +47,14 @@ describe('AcceptedRequestCard', () => {
 
     expect(screen.getByText('Integrales por partes')).toBeInTheDocument();
     expect(screen.getByText('Calculo Integral')).toBeInTheDocument();
-    expect(screen.getByText('Confirmada')).toBeInTheDocument();
+    expect(screen.getByText('En coordinación')).toBeInTheDocument();
     expect(screen.getByText('Presencial')).toBeInTheDocument();
     expect(screen.getByText('Laura Ramirez')).toBeInTheDocument();
     expect(screen.getByText('Viernes 10-12am')).toBeInTheDocument();
     expect(screen.getByText(/aceptada el:/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ver asesor/i })).toHaveAttribute(
       'href',
-      '/tutoring/requests/3',
+      '/tutoring/requests/3?from=agenda',
     );
   });
 
@@ -69,5 +72,62 @@ describe('AcceptedRequestCard', () => {
     render(<AcceptedRequestCard request={buildRequest({ asesoria: null })} />);
 
     expect(screen.getByText(/aceptada el:/i)).toBeInTheDocument();
+  });
+
+  it('muestra las acciones y el resumen de confirmaciones en coordinacion', () => {
+    render(
+      <AcceptedRequestCard
+        request={buildRequest({
+          asesoria: {
+            ...buildRequest().asesoria!,
+            confirmadaEstudiante: true,
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Confirmar finalización')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancelar asesoría/i })).toBeInTheDocument();
+    expect(screen.getByText('El estudiante confirmó la finalización')).toBeInTheDocument();
+    expect(screen.getByText('Falta tu confirmación')).toBeInTheDocument();
+  });
+
+  it('muestra la asesoria finalizada sin acciones', () => {
+    render(
+      <AcceptedRequestCard
+        request={buildRequest({
+          asesoria: {
+            ...buildRequest().asesoria!,
+            estado: 'FINALIZADA',
+            confirmadaEstudiante: true,
+            confirmadaTutor: true,
+            finalizadaAt: '2026-10-25T10:00:00Z',
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Finalizada')).toBeInTheDocument();
+    expect(screen.getByText(/asesoría finalizada el/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /confirmar finalización/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancelar asesoría/i })).not.toBeInTheDocument();
+  });
+
+  it('muestra la asesoria cancelada sin acciones', () => {
+    render(
+      <AcceptedRequestCard
+        request={buildRequest({
+          estado: 'CANCELADA',
+          asesoria: {
+            ...buildRequest().asesoria!,
+            estado: 'CANCELADA',
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText('Cancelada')).toBeInTheDocument();
+    expect(screen.getByText('Esta asesoría fue cancelada.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /confirmar finalización/i })).not.toBeInTheDocument();
   });
 });

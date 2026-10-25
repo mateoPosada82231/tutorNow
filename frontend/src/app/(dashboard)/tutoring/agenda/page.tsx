@@ -349,7 +349,7 @@ export default function TutorAgendaPage() {
           <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {accepted.map((request) => (
               <li key={request.id}>
-                <AcceptedRequestCard request={request} />
+                <AcceptedRequestCard request={request} onUpdated={loadAccepted} />
               </li>
             ))}
           </ul>

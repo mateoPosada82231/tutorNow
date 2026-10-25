@@ -1,5 +1,6 @@
 import { httpClient } from '@/lib/httpClient';
 import type {
+  Asesoria,
   CatalogItem,
   Page,
   Proposal,
@@ -45,6 +46,12 @@ export function createTutoringRequest(data: TutoringRequestRequest): Promise<Tut
 
 export function cancelTutoringRequest(id: number): Promise<void> {
   return httpClient.delete<void>(`/tutoring-requests/${id}`, { auth: true });
+}
+
+export function finishAsesoria(asesoriaId: number): Promise<Asesoria> {
+  return httpClient.put<Asesoria>(`/asesorias/${asesoriaId}/finalizar`, undefined, {
+    auth: true,
+  });
 }
 
 export function createProposal(solicitudId: number, data: ProposalRequest): Promise<Proposal> {

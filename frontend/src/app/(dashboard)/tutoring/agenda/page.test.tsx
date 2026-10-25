@@ -13,6 +13,8 @@ vi.mock('@/features/schedule/api/scheduleApi', () => ({
 
 vi.mock('@/features/tutoring/api/tutoringApi', () => ({
   fetchAcceptedTutoringRequests: vi.fn(),
+  cancelTutoringRequest: vi.fn(),
+  finishAsesoria: vi.fn(),
 }));
 
 vi.mock('next/link', () => ({
@@ -42,6 +44,9 @@ function buildAcceptedRequest(overrides: Partial<TutoringRequest> = {}): Tutorin
       solicitudId: 1,
       propuestaId: 7,
       estado: 'PENDIENTE',
+      confirmadaEstudiante: false,
+      confirmadaTutor: false,
+      finalizadaAt: null,
       tutor: { id: 5, fullName: 'Tutor User', biografia: '', materias: [] },
       createdAt: '2026-10-20T10:00:00Z',
     },
@@ -191,10 +196,12 @@ describe('TutorAgendaPage', () => {
     expect(screen.getByText('Ana Perez')).toBeInTheDocument();
     expect(screen.getByText('Calculo Diferencial')).toBeInTheDocument();
     expect(screen.getByText(/necesito ayuda con la tarea 3/i)).toBeInTheDocument();
+    expect(screen.getByText('En coordinación')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /confirmar finalización/i })).toBeInTheDocument();
     expect(screen.getByText('1 asesoría')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /ver asesor/i })).toHaveAttribute(
       'href',
-      '/tutoring/requests/1',
+      '/tutoring/requests/1?from=agenda',
     );
   });
 

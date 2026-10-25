@@ -1,20 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
-import type { SolicitudEstado, TutoringRequest } from '../types';
-
-const estadoStyles: Record<SolicitudEstado, string> = {
-  PUBLICADA: 'bg-brand-poli/10 text-brand-poli',
-  EN_PROCESO: 'bg-brand-accent/20 text-text-main',
-  CONFIRMADA: 'bg-success/10 text-success',
-  CANCELADA: 'bg-error/10 text-error',
-};
-
-const estadoLabels: Record<SolicitudEstado, string> = {
-  PUBLICADA: 'Publicada',
-  EN_PROCESO: 'En proceso',
-  CONFIRMADA: 'Confirmada',
-  CANCELADA: 'Cancelada',
-};
+import type { TutoringRequest } from '../types';
+import { estadoCiclo } from '../lib/estadoCiclo';
 
 const modalidadLabels: Record<TutoringRequest['modalidad'], string> = {
   VIRTUAL: 'Virtual',
@@ -26,13 +13,15 @@ interface RequestCardProps {
 }
 
 export function RequestCard({ request }: RequestCardProps) {
+  const ciclo = estadoCiclo(request);
+
   return (
     <article className="group flex h-full flex-col gap-3 rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-poli hover:shadow-lg md:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <span
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${estadoStyles[request.estado]}`}
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${ciclo.className}`}
         >
-          {estadoLabels[request.estado]}
+          {ciclo.label}
         </span>
         <span className="inline-flex items-center rounded-full border border-border-color bg-bg-primary px-2.5 py-0.5 text-xs font-semibold text-text-muted">
           {modalidadLabels[request.modalidad]}

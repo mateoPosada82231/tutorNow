@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TutoringRequestDetailPage from './page';
@@ -8,10 +8,14 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import type { TutoringRequest } from '@/features/tutoring/types';
 
 const pushMock = vi.fn();
+const { searchParamsMock } = vi.hoisted(() => ({
+  searchParamsMock: { current: new URLSearchParams() },
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
   useParams: () => ({ id: '1' }),
+  useSearchParams: () => searchParamsMock.current,
 }));
 
 vi.mock('next/link', () => ({
@@ -25,6 +29,7 @@ vi.mock('next/link', () => ({
 vi.mock('@/features/tutoring/api/tutoringApi', () => ({
   fetchTutoringRequest: vi.fn(),
   cancelTutoringRequest: vi.fn(),
+  finishAsesoria: vi.fn(),
   createProposal: vi.fn(),
   acceptProposal: vi.fn(),
   rejectProposal: vi.fn(),
@@ -51,7 +56,9 @@ function buildRequest(overrides: Partial<TutoringRequest> = {}): TutoringRequest
 
 describe('TutoringRequestDetailPage', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    searchParamsMock.current = new URLSearchParams();
     useAuthStore.setState({
       token: 'token',
       user: { id: 2, email: 'ana@elpoli.edu.co', fullName: 'Ana Perez', role: 'ESTUDIANTE' },
@@ -129,6 +136,9 @@ describe('TutoringRequestDetailPage', () => {
           solicitudId: 1,
           propuestaId: 10,
           estado: 'PENDIENTE',
+          confirmadaEstudiante: false,
+          confirmadaTutor: false,
+          finalizadaAt: null,
           tutor: {
             id: 3,
             fullName: 'Carlos Gomez',
@@ -210,6 +220,9 @@ describe('TutoringRequestDetailPage', () => {
           solicitudId: 1,
           propuestaId: 10,
           estado: 'PENDIENTE',
+          confirmadaEstudiante: false,
+          confirmadaTutor: false,
+          finalizadaAt: null,
           tutor: {
             id: 3,
             fullName: 'Carlos Gomez',
@@ -337,10 +350,136 @@ describe('TutoringRequestDetailPage', () => {
     render(<TutoringRequestDetailPage />);
 
     expect(await screen.findByText(/no tienes acceso a esta asesoria/i)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /volver a asesorias/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /volver a asesorías/i })).toHaveAttribute(
       'href',
       '/tutoring/requests',
     );
     expect(screen.queryByRole('button', { name: /reintentar/i })).not.toBeInTheDocument();
+  });
+
+  it('vuelve a la agenda cuando la asesoria se abrio desde alli', async () => {
+    searchParamsMock.current = new URLSearchParams('from=agenda');
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({ estado: 'EN_PROCESO' }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByRole('link', { name: /volver a la agenda/i })).toHaveAttribute(
+      'href',
+      '/tutoring/agenda',
+    );
+    expect(
+      screen.queryByRole('link', { name: /volver a asesorías/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('permite al estudiante confirmar la finalizacion', async () => {
+    const user = userEvent.setup();
+    const request = buildRequest({
+      estado: 'CONFIRMADA',
+      asesoria: {
+        id: 11,
+        solicitudId: 1,
+        propuestaId: 10,
+        estado: 'PENDIENTE',
+        confirmadaEstudiante: false,
+        confirmadaTutor: false,
+        finalizadaAt: null,
+        tutor: { id: 3, fullName: 'Carlos Gomez', biografia: '', materias: [] },
+        createdAt: '2026-10-02T11:00:00',
+      },
+    });
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(request);
+    vi.mocked(tutoringApi.finishAsesoria).mockResolvedValue(request.asesoria!);
+    render(<TutoringRequestDetailPage />);
+
+    await user.click(
+      await screen.findByRole('button', { name: /confirmar finalización/i }),
+    );
+
+    await waitFor(() => expect(tutoringApi.finishAsesoria).toHaveBeenCalledWith(11));
+    await waitFor(() => expect(tutoringApi.fetchTutoringRequest).toHaveBeenCalledTimes(2));
+  });
+
+  it('muestra el resumen de confirmaciones y espera a la otra parte', async () => {
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        asesoria: {
+          id: 11,
+          solicitudId: 1,
+          propuestaId: 10,
+          estado: 'PENDIENTE',
+          confirmadaEstudiante: true,
+          confirmadaTutor: false,
+          finalizadaAt: null,
+          tutor: { id: 3, fullName: 'Carlos Gomez', biografia: '', materias: [] },
+          createdAt: '2026-10-02T11:00:00',
+        },
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByText('Confirmaste la finalización')).toBeInTheDocument();
+    expect(screen.getByText('El tutor aún no confirma')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /esperando a la otra parte/i }),
+    ).toBeDisabled();
+  });
+
+  it('muestra la asesoria finalizada con su fecha y sin acciones', async () => {
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        asesoria: {
+          id: 11,
+          solicitudId: 1,
+          propuestaId: 10,
+          estado: 'FINALIZADA',
+          confirmadaEstudiante: true,
+          confirmadaTutor: true,
+          finalizadaAt: '2026-10-25T10:00:00Z',
+          tutor: { id: 3, fullName: 'Carlos Gomez', biografia: '', materias: [] },
+          createdAt: '2026-10-02T11:00:00',
+        },
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByText(/asesoría finalizada el/i)).toBeInTheDocument();
+    expect(screen.getByText('Finalizada')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /confirmar finalización/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('permite cancelar una asesoria en coordinacion', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        asesoria: {
+          id: 11,
+          solicitudId: 1,
+          propuestaId: 10,
+          estado: 'PENDIENTE',
+          confirmadaEstudiante: false,
+          confirmadaTutor: false,
+          finalizadaAt: null,
+          tutor: { id: 3, fullName: 'Carlos Gomez', biografia: '', materias: [] },
+          createdAt: '2026-10-02T11:00:00',
+        },
+      }),
+    );
+    vi.mocked(tutoringApi.cancelTutoringRequest).mockResolvedValue(undefined);
+    render(<TutoringRequestDetailPage />);
+
+    await user.click(await screen.findByRole('button', { name: /cancelar asesoría/i }));
+
+    await waitFor(() =>
+      expect(tutoringApi.cancelTutoringRequest).toHaveBeenCalledWith(1),
+    );
+    await waitFor(() => expect(tutoringApi.fetchTutoringRequest).toHaveBeenCalledTimes(2));
   });
 });

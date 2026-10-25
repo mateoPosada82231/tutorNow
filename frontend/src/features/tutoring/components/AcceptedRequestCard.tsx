@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { ArrowRight, CalendarCheck2, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CalendarCheck2 } from 'lucide-react';
 import type { TutoringRequest } from '../types';
+import { estadoCiclo } from '../lib/estadoCiclo';
+import { AsesoriaActions } from './AsesoriaActions';
 
 const modalidadLabels: Record<TutoringRequest['modalidad'], string> = {
   VIRTUAL: 'Virtual',
@@ -9,6 +11,7 @@ const modalidadLabels: Record<TutoringRequest['modalidad'], string> = {
 
 interface AcceptedRequestCardProps {
   request: TutoringRequest;
+  onUpdated?: () => void | Promise<void>;
 }
 
 function formatFecha(iso: string): string {
@@ -21,16 +24,18 @@ function formatFecha(iso: string): string {
   }).format(fecha);
 }
 
-export function AcceptedRequestCard({ request }: AcceptedRequestCardProps) {
+export function AcceptedRequestCard({ request, onUpdated }: AcceptedRequestCardProps) {
   const acceptedAt = request.asesoria?.createdAt ?? request.createdAt;
   const fechaAceptada = formatFecha(acceptedAt);
+  const ciclo = estadoCiclo(request);
 
   return (
     <article className="flex h-full flex-col gap-3 rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-success hover:shadow-lg md:p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
-          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-          Confirmada
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${ciclo.className}`}
+        >
+          {ciclo.label}
         </span>
         <span className="inline-flex items-center rounded-full border border-border-color bg-bg-primary px-2.5 py-0.5 text-xs font-semibold text-text-muted">
           {modalidadLabels[request.modalidad]}
@@ -68,9 +73,13 @@ export function AcceptedRequestCard({ request }: AcceptedRequestCardProps) {
         </p>
       )}
 
+      {request.asesoria && (
+        <AsesoriaActions request={request} onUpdated={onUpdated} />
+      )}
+
       <div className="mt-auto flex items-center justify-end pt-2">
         <Link
-          href={`/tutoring/requests/${request.id}`}
+          href={`/tutoring/requests/${request.id}?from=agenda`}
           className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
         >
           Ver asesoría
