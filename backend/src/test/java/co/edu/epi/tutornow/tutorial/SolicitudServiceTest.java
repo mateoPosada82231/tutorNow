@@ -8,11 +8,14 @@ import co.edu.epi.tutornow.common.exception.ForbiddenException;
 import co.edu.epi.tutornow.common.exception.ResourceNotFoundException;
 import co.edu.epi.tutornow.tutorial.dto.CreateTutoringRequest;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.service.SolicitudService;
@@ -43,6 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +59,8 @@ class SolicitudServiceTest {
     private SolicitudAsesoriaRepository solicitudRepository;
     @Mock
     private PropuestaRepository propuestaRepository;
+    @Mock
+    private AsesoriaRepository asesoriaRepository;
     @Mock
     private UsuarioRepository usuarioRepository;
     @Mock
@@ -189,7 +195,7 @@ class SolicitudServiceTest {
             when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
                     .thenReturn(Optional.of(estudiante));
             SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.PUBLICADA);
-            when(solicitudRepository.findFiltered(any(), any(), any(), any(), any()))
+            when(solicitudRepository.findFiltered(any(), any(), any(), any(), any(), any()))
                     .thenReturn(new PageImpl<>(List.of(solicitud), PageRequest.of(0, 10), 1));
             when(propuestaRepository.countGroupedBySolicitudId(List.of(1L)))
                     .thenReturn(List.<Object[]>of(new Object[]{1L, 3L}));
@@ -197,8 +203,8 @@ class SolicitudServiceTest {
             PageResponse<TutoringRequestResponse> page = solicitudService.list(
                     estudiante.getCorreoElectronico(), null, null, null, 0, 10);
 
-            verify(solicitudRepository).findFiltered(eq(1L), any(), any(), any(), any());
-            verify(solicitudRepository, never()).findFilteredPrioritized(any(), any(), any(), any(), any());
+            verify(solicitudRepository).findFiltered(eq(1L), isNull(), any(), any(), any(), any());
+            verify(solicitudRepository, never()).findFilteredPrioritized(any(), any(), any(), any(), any(), any());
             assertThat(page.getData()).hasSize(1);
             assertThat(page.getData().get(0).getPropuestasCount()).isEqualTo(3L);
             assertThat(page.getData().get(0).getIsProfileMatch()).isNull();
@@ -220,13 +226,13 @@ class SolicitudServiceTest {
                     .tema("Tiro parabolico").modalidad(Modalidad.VIRTUAL)
                     .disponibilidad("Viernes 10-12am").estado(EstadoSolicitud.PUBLICADA)
                     .createdAt(OffsetDateTime.now()).build();
-            when(solicitudRepository.findFilteredPrioritized(any(), any(), any(), any(), any()))
+            when(solicitudRepository.findFilteredPrioritized(any(), any(), any(), any(), any(), any()))
                     .thenReturn(new PageImpl<>(List.of(match, otro), PageRequest.of(0, 10), 2));
 
             PageResponse<TutoringRequestResponse> page = solicitudService.list(
                     "tutor@elpoli.edu.co", null, null, null, 0, 10);
 
-            verify(solicitudRepository).findFilteredPrioritized(any(), any(), any(), any(), any());
+            verify(solicitudRepository).findFilteredPrioritized(eq(5L), any(), any(), any(), any(), any());
             assertThat(page.getData()).hasSize(2);
             assertThat(page.getData().get(0).getIsProfileMatch()).isTrue();
             assertThat(page.getData().get(1).getIsProfileMatch()).isFalse();
@@ -243,6 +249,61 @@ class SolicitudServiceTest {
                     estudiante.getCorreoElectronico(), null, null, "CUALQUIERA", 0, 10))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Estado no valido");
+        }
+    }
+
+    @Nested
+    @DisplayName("Asesorias aceptadas por el tutor")
+    class AsesoriasAceptadas {
+
+        @Test
+        @DisplayName("Devuelve las asesorias aceptadas con los datos de la solicitud")
+        void listaAceptadas() {
+            Usuario tutorUsuario = Usuario.builder().id(2L)
+                    .correoElectronico("tutor@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno")
+                    .rol(Rol.TUTOR).build();
+            Tutor tutor = Tutor.builder().id(5L).usuario(tutorUsuario).materias(Set.of(materiaCalculo)).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorUsuario));
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Propuesta propuesta = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Puedo ayudarte con eso")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(propuesta)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(asesoriaRepository.findByTutorCorreo(eq("tutor@elpoli.edu.co"), any()))
+                    .thenReturn(new PageImpl<>(List.of(asesoria), PageRequest.of(0, 20), 1));
+            when(propuestaRepository.countGroupedBySolicitudId(List.of(1L)))
+                    .thenReturn(List.<Object[]>of(new Object[]{1L, 1L}));
+
+            PageResponse<TutoringRequestResponse> page = solicitudService
+                    .listAcceptedForTutor("tutor@elpoli.edu.co", 0, 20);
+
+            assertThat(page.getData()).hasSize(1);
+            TutoringRequestResponse item = page.getData().get(0);
+            assertThat(item.getId()).isEqualTo(1L);
+            assertThat(item.getEstado()).isEqualTo("CONFIRMADA");
+            assertThat(item.getAsesoria()).isNotNull();
+            assertThat(item.getAsesoria().getId()).isEqualTo(20L);
+            assertThat(item.getAsesoria().getTutor().getFullName()).isEqualTo("Tutor Uno");
+            assertThat(item.getIsProfileMatch()).isNull();
+            assertThat(page.getPagination().getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Un estudiante no puede consultar asesorias aceptadas (403)")
+        void estudianteNoTieneAceptadas() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+
+            assertThatThrownBy(() -> solicitudService
+                    .listAcceptedForTutor(estudiante.getCorreoElectronico(), 0, 20))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Solo los tutores");
+            verify(asesoriaRepository, never()).findByTutorCorreo(any(), any());
         }
     }
 

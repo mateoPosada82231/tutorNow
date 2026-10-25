@@ -53,6 +53,16 @@ public class TutoringRequestController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/accepted")
+    public ResponseEntity<PageResponse<TutoringRequestResponse>> listAccepted(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        PageResponse<TutoringRequestResponse> response = solicitudService.listAcceptedForTutor(
+                userDetails.getUsername(), page, size);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<TutoringRequestResponse> getById(
             @AuthenticationPrincipal UserDetails userDetails,

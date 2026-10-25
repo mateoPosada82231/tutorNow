@@ -13,7 +13,9 @@ import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutors.model.Tutor;
@@ -41,6 +43,7 @@ public class SolicitudService {
 
     private final SolicitudAsesoriaRepository solicitudRepository;
     private final PropuestaRepository propuestaRepository;
+    private final AsesoriaRepository asesoriaRepository;
     private final UsuarioRepository usuarioRepository;
     private final TutorRepository tutorRepository;
     private final MateriaRepository materiaRepository;
@@ -87,16 +90,19 @@ public class SolicitudService {
         Set<Long> materiasTutor = Set.of();
         Page<SolicitudAsesoria> resultado;
         if (usuario.getRol() == Rol.TUTOR) {
-            materiasTutor = tutorRepository.findByUsuario_CorreoElectronico(correo)
-                    .map(t -> t.getMaterias().stream().map(Materia::getId).collect(Collectors.toSet()))
-                    .orElse(Set.of());
+            Tutor tutor = tutorRepository.findByUsuario_CorreoElectronico(correo).orElse(null);
+            if (tutor != null) {
+                materiasTutor = tutor.getMaterias().stream().map(Materia::getId).collect(Collectors.toSet());
+            }
+            Long tutorExcluirId = tutor == null ? null : tutor.getId();
             resultado = materiasTutor.isEmpty()
-                    ? solicitudRepository.findFiltered(null, materiaId, modalidadFiltro, estadoFiltro, pageable)
-                    : solicitudRepository.findFilteredPrioritized(materiaId, modalidadFiltro, estadoFiltro,
-                            List.copyOf(materiasTutor), pageable);
+                    ? solicitudRepository.findFiltered(null, tutorExcluirId, materiaId, modalidadFiltro, estadoFiltro,
+                            pageable)
+                    : solicitudRepository.findFilteredPrioritized(tutorExcluirId, materiaId, modalidadFiltro,
+                            estadoFiltro, List.copyOf(materiasTutor), pageable);
         } else {
-            resultado = solicitudRepository.findFiltered(usuario.getId(), materiaId, modalidadFiltro, estadoFiltro,
-                    pageable);
+            resultado = solicitudRepository.findFiltered(usuario.getId(), null, materiaId, modalidadFiltro,
+                    estadoFiltro, pageable);
         }
         final Set<Long> materiasTutorFinal = materiasTutor;
 
@@ -114,6 +120,45 @@ public class SolicitudService {
                         List.of(),
                         usuario.getRol() == Rol.TUTOR ? materiasTutorFinal.contains(s.getMateria().getId()) : null,
                         null))
+                .toList();
+
+        return PageResponse.<TutoringRequestResponse>builder()
+                .data(data)
+                .pagination(PageResponse.PaginationInfo.builder()
+                        .page(resultado.getNumber())
+                        .size(resultado.getSize())
+                        .totalElements(resultado.getTotalElements())
+                        .totalPages(resultado.getTotalPages())
+                        .build())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TutoringRequestResponse> listAcceptedForTutor(
+            String correo,
+            int page,
+            int size) {
+        Usuario usuario = findUsuario(correo);
+        if (usuario.getRol() != Rol.TUTOR) {
+            throw new ForbiddenException("Solo los tutores tienen asesorias aceptadas");
+        }
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+        Page<Asesoria> resultado = asesoriaRepository.findByTutorCorreo(correo, pageable);
+
+        List<Long> ids = resultado.getContent().stream().map(a -> a.getSolicitud().getId()).toList();
+        Map<Long, Long> conteos = ids.isEmpty()
+                ? Map.of()
+                : propuestaRepository.countGroupedBySolicitudId(ids).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        List<TutoringRequestResponse> data = resultado.getContent().stream()
+                .map(a -> mapper.toSolicitudResponse(
+                        usuario,
+                        a.getSolicitud(),
+                        conteos.getOrDefault(a.getSolicitud().getId(), 0L),
+                        List.of(),
+                        null,
+                        mapper.toAsesoriaResponse(a)))
                 .toList();
 
         return PageResponse.<TutoringRequestResponse>builder()
