@@ -21,14 +21,19 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
               AND (:materiaId IS NULL OR s.materia.id = :materiaId)
               AND (:modalidad IS NULL OR s.modalidad = :modalidad)
               AND (:estado IS NULL OR s.estado = :estado)
-              AND (:tutorExcluirId IS NULL OR NOT EXISTS (
-                    SELECT a FROM Asesoria a
-                    WHERE a.solicitud.id = s.id AND a.tutor.id = :tutorExcluirId))
+              AND (:ocultarNoDisponibles = FALSE OR (
+                    s.estudiante.id = :viewerId
+                    OR (s.estado <> :estadoCancelada
+                        AND NOT EXISTS (
+                            SELECT a FROM Asesoria a
+                            WHERE a.solicitud.id = s.id))))
             ORDER BY s.createdAt DESC
             """)
     Page<SolicitudAsesoria> findFiltered(
             @Param("estudianteId") Long estudianteId,
-            @Param("tutorExcluirId") Long tutorExcluirId,
+            @Param("viewerId") Long viewerId,
+            @Param("ocultarNoDisponibles") boolean ocultarNoDisponibles,
+            @Param("estadoCancelada") EstadoSolicitud estadoCancelada,
             @Param("materiaId") Long materiaId,
             @Param("modalidad") Modalidad modalidad,
             @Param("estado") EstadoSolicitud estado,
@@ -39,13 +44,18 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             WHERE (:materiaId IS NULL OR s.materia.id = :materiaId)
               AND (:modalidad IS NULL OR s.modalidad = :modalidad)
               AND (:estado IS NULL OR s.estado = :estado)
-              AND (:tutorExcluirId IS NULL OR NOT EXISTS (
-                    SELECT a FROM Asesoria a
-                    WHERE a.solicitud.id = s.id AND a.tutor.id = :tutorExcluirId))
+              AND (:ocultarNoDisponibles = FALSE OR (
+                    s.estudiante.id = :viewerId
+                    OR (s.estado <> :estadoCancelada
+                        AND NOT EXISTS (
+                            SELECT a FROM Asesoria a
+                            WHERE a.solicitud.id = s.id))))
             ORDER BY CASE WHEN s.materia.id IN :materias THEN 0 ELSE 1 END, s.createdAt DESC
             """)
     Page<SolicitudAsesoria> findFilteredPrioritized(
-            @Param("tutorExcluirId") Long tutorExcluirId,
+            @Param("viewerId") Long viewerId,
+            @Param("ocultarNoDisponibles") boolean ocultarNoDisponibles,
+            @Param("estadoCancelada") EstadoSolicitud estadoCancelada,
             @Param("materiaId") Long materiaId,
             @Param("modalidad") Modalidad modalidad,
             @Param("estado") EstadoSolicitud estado,
