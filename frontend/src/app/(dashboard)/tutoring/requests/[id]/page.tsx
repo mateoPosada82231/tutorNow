@@ -17,7 +17,12 @@ import {
   fetchTutoringRequest,
   rejectProposal,
 } from '@/features/tutoring/api/tutoringApi';
-import type { AsesoriaEstado, Proposal, TutoringRequest } from '@/features/tutoring/types';
+import type {
+  AsesoriaEstado,
+  Proposal,
+  TutoringRequest,
+  VistaSolicitudes,
+} from '@/features/tutoring/types';
 import { estadoCiclo } from '@/features/tutoring/lib/estadoCiclo';
 import { validateMensaje } from '@/features/tutoring/hooks/validation';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -54,8 +59,21 @@ function TutoringRequestDetailContent() {
   const requestId = Number(params.id);
   const searchParams = useSearchParams();
   const fromAgenda = searchParams.get('from') === 'agenda';
-  const volverHref = fromAgenda ? '/tutoring/agenda' : '/tutoring/requests';
-  const volverLabel = fromAgenda ? 'Volver a la agenda' : 'Volver a asesorías';
+  const vistaParam = searchParams.get('vista');
+  const vista: VistaSolicitudes | null =
+    vistaParam === 'abiertas' || vistaParam === 'coordinacion' || vistaParam === 'historial'
+      ? vistaParam
+      : null;
+  const volverHref = fromAgenda
+    ? '/tutoring/agenda'
+    : vista === 'coordinacion' || vista === 'historial'
+      ? `/tutoring/requests?vista=${vista}`
+      : '/tutoring/requests';
+  const volverLabel = fromAgenda
+    ? 'Volver a la agenda'
+    : vista === 'historial'
+      ? 'Volver al historial'
+      : 'Volver a asesorías';
   const user = useAuthStore((state) => state.user);
   const isTutor = user?.role === 'TUTOR';
 

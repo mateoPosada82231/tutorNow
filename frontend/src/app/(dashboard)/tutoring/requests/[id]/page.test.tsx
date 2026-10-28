@@ -373,6 +373,44 @@ describe('TutoringRequestDetailPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('vuelve a la vista de coordinacion cuando se abrio desde alli', async () => {
+    searchParamsMock.current = new URLSearchParams('from=requests&vista=coordinacion');
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({ estado: 'CONFIRMADA' }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(
+      await screen.findByRole('link', { name: /volver a asesorías/i }),
+    ).toHaveAttribute('href', '/tutoring/requests?vista=coordinacion');
+  });
+
+  it('vuelve al historial cuando la asesoria se abrio desde alli', async () => {
+    searchParamsMock.current = new URLSearchParams('from=requests&vista=historial');
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
+      buildRequest({
+        estado: 'CONFIRMADA',
+        asesoria: {
+          id: 11,
+          solicitudId: 1,
+          propuestaId: 10,
+          estado: 'FINALIZADA',
+          confirmadaEstudiante: true,
+          confirmadaTutor: true,
+          finalizadaAt: '2026-10-20T10:00:00',
+          tutor: { id: 3, fullName: 'Carlos Gomez', biografia: '', materias: [] },
+          createdAt: '2026-10-02T11:00:00',
+        },
+      }),
+    );
+    render(<TutoringRequestDetailPage />);
+
+    expect(await screen.findByRole('link', { name: /volver al historial/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests?vista=historial',
+    );
+  });
+
   it('permite al estudiante confirmar la finalizacion', async () => {
     const user = userEvent.setup();
     const request = buildRequest({

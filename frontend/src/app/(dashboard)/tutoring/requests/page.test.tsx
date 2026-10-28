@@ -1,9 +1,17 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TutoringRequestsPage from './page';
 import * as tutoringApi from '@/features/tutoring/api/tutoringApi';
 import { useAuthStore } from '@/stores/useAuthStore';
-import type { TutoringRequest } from '@/features/tutoring/types';
+import type { Asesoria, TutoringRequest } from '@/features/tutoring/types';
+
+const { searchParamsMock } = vi.hoisted(() => ({
+  searchParamsMock: { current: new URLSearchParams() },
+}));
+
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => searchParamsMock.current,
+}));
 
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
@@ -16,6 +24,21 @@ vi.mock('next/link', () => ({
 vi.mock('@/features/tutoring/api/tutoringApi', () => ({
   fetchTutoringRequests: vi.fn(),
 }));
+
+function buildAsesoria(overrides: Partial<Asesoria> = {}): Asesoria {
+  return {
+    id: 20,
+    solicitudId: 1,
+    propuestaId: 7,
+    estado: 'PENDIENTE',
+    confirmadaEstudiante: false,
+    confirmadaTutor: false,
+    finalizadaAt: null,
+    tutor: { id: 5, fullName: 'Carlos Gomez', biografia: '', materias: [] },
+    createdAt: '2026-10-02T10:00:00',
+    ...overrides,
+  };
+}
 
 function buildRequest(overrides: Partial<TutoringRequest> = {}): TutoringRequest {
   return {
@@ -39,6 +62,7 @@ function buildRequest(overrides: Partial<TutoringRequest> = {}): TutoringRequest
 describe('TutoringRequestsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchParamsMock.current = new URLSearchParams();
     vi.mocked(tutoringApi.fetchTutoringRequests).mockResolvedValue({
       data: [buildRequest()],
       pagination: { page: 0, size: 20, totalElements: 1, totalPages: 1 },
@@ -73,6 +97,8 @@ describe('TutoringRequestsPage', () => {
       'href',
       '/tutoring/requests/new',
     );
+    expect(screen.queryByRole('link', { name: /por aceptar/i })).not.toBeInTheDocument();
+    await waitFor(() => expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({}));
   });
 
   it('muestra el estado vacio propio cuando el estudiante no ha publicado', async () => {
@@ -88,5 +114,112 @@ describe('TutoringRequestsPage', () => {
     render(<TutoringRequestsPage />);
 
     expect(await screen.findByText(/todavia no has publicado asesorias/i)).toBeInTheDocument();
+  });
+
+  it('muestra las tabs del estudiante y carga por aceptar por defecto', async () => {
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 2, email: 'ana@elpoli.edu.co', fullName: 'Ana Perez', role: 'ESTUDIANTE' },
+      isAuthenticated: true,
+    });
+    render(<TutoringRequestsPage />);
+
+    expect(await screen.findByRole('link', { name: /por aceptar/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: /en coordinación/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests?vista=coordinacion',
+    );
+    expect(screen.getByRole('link', { name: /historial/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests?vista=historial',
+    );
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({
+        vista: 'abiertas',
+        size: 20,
+      }),
+    );
+  });
+
+  it('carga la vista de coordinacion con las acciones de la asesoria', async () => {
+    searchParamsMock.current = new URLSearchParams({ vista: 'coordinacion' });
+    vi.mocked(tutoringApi.fetchTutoringRequests).mockResolvedValue({
+      data: [
+        buildRequest({
+          id: 1,
+          estado: 'CONFIRMADA',
+          asesoria: buildAsesoria(),
+        }),
+      ],
+      pagination: { page: 0, size: 20, totalElements: 1, totalPages: 1 },
+    });
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 2, email: 'ana@elpoli.edu.co', fullName: 'Ana Perez', role: 'ESTUDIANTE' },
+      isAuthenticated: true,
+    });
+    render(<TutoringRequestsPage />);
+
+    expect(await screen.findByText('Carlos Gomez')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /en coordinación/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('button', { name: /confirmar finalización/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cancelar asesoría/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver asesoría/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests/1?from=requests&vista=coordinacion',
+    );
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({
+        vista: 'coordinacion',
+        size: 20,
+      }),
+    );
+  });
+
+  it('carga el historial en solo lectura y enlaza de vuelta a esa vista', async () => {
+    searchParamsMock.current = new URLSearchParams({ vista: 'historial' });
+    vi.mocked(tutoringApi.fetchTutoringRequests).mockResolvedValue({
+      data: [
+        buildRequest({
+          id: 9,
+          estado: 'CONFIRMADA',
+          asesoria: buildAsesoria({
+            estado: 'FINALIZADA',
+            finalizadaAt: '2026-10-20T10:00:00',
+          }),
+        }),
+      ],
+      pagination: { page: 0, size: 20, totalElements: 1, totalPages: 1 },
+    });
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 2, email: 'ana@elpoli.edu.co', fullName: 'Ana Perez', role: 'ESTUDIANTE' },
+      isAuthenticated: true,
+    });
+    render(<TutoringRequestsPage />);
+
+    expect(await screen.findByText(/asesoría finalizada el/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /historial/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.queryByRole('button', { name: /confirmar finalización/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /cancelar asesoría/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /ver detalle/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests/9?from=requests&vista=historial',
+    );
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({
+        vista: 'historial',
+        size: 20,
+      }),
+    );
   });
 });
