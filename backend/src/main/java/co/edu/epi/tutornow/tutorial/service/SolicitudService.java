@@ -9,11 +9,15 @@ import co.edu.epi.tutornow.catalog.repository.MateriaRepository;
 import co.edu.epi.tutornow.tutorial.dto.CreateTutoringRequest;
 import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
+import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.model.VistaSolicitudes;
+import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutors.model.Tutor;
@@ -41,6 +45,7 @@ public class SolicitudService {
 
     private final SolicitudAsesoriaRepository solicitudRepository;
     private final PropuestaRepository propuestaRepository;
+    private final AsesoriaRepository asesoriaRepository;
     private final UsuarioRepository usuarioRepository;
     private final TutorRepository tutorRepository;
     private final MateriaRepository materiaRepository;
@@ -77,26 +82,46 @@ public class SolicitudService {
             Long materiaId,
             String modalidad,
             String estado,
+            String vista,
             int page,
             int size) {
         Usuario usuario = findUsuario(correo);
         Modalidad modalidadFiltro = parseModalidad(modalidad);
         EstadoSolicitud estadoFiltro = parseEstado(estado);
+        VistaSolicitudes vistaFiltro = parseVista(vista);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
 
         Set<Long> materiasTutor = Set.of();
+        boolean esTutor = usuario.getRol() == Rol.TUTOR;
+        if (vistaFiltro != null && usuario.getRol() != Rol.ESTUDIANTE) {
+            throw new ForbiddenException("Las vistas de asesorias son para estudiantes");
+        }
         Page<SolicitudAsesoria> resultado;
-        if (usuario.getRol() == Rol.TUTOR) {
-            materiasTutor = tutorRepository.findByUsuario_CorreoElectronico(correo)
-                    .map(t -> t.getMaterias().stream().map(Materia::getId).collect(Collectors.toSet()))
-                    .orElse(Set.of());
+        if (esTutor) {
+            Tutor tutor = tutorRepository.findByUsuario_CorreoElectronico(correo).orElse(null);
+            if (tutor != null) {
+                materiasTutor = tutor.getMaterias().stream().map(Materia::getId).collect(Collectors.toSet());
+            }
             resultado = materiasTutor.isEmpty()
-                    ? solicitudRepository.findFiltered(null, materiaId, modalidadFiltro, estadoFiltro, pageable)
-                    : solicitudRepository.findFilteredPrioritized(materiaId, modalidadFiltro, estadoFiltro,
+                    ? solicitudRepository.findFiltered(null, usuario.getId(), true,
+                            EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable)
+                    : solicitudRepository.findFilteredPrioritized(usuario.getId(), true,
+                            EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro,
                             List.copyOf(materiasTutor), pageable);
+        } else if (vistaFiltro == null) {
+            resultado = solicitudRepository.findFiltered(usuario.getId(), usuario.getId(), false,
+                    EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable);
         } else {
-            resultado = solicitudRepository.findFiltered(usuario.getId(), materiaId, modalidadFiltro, estadoFiltro,
-                    pageable);
+            resultado = switch (vistaFiltro) {
+                case ABIERTAS -> solicitudRepository.findOpenForStudent(usuario.getId(),
+                        EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable);
+                case COORDINACION -> solicitudRepository.findInCoordinationForStudent(usuario.getId(),
+                        EstadoAsesoria.PENDIENTE, materiaId, modalidadFiltro, pageable);
+                case HISTORIAL -> solicitudRepository.findHistoryForStudent(usuario.getId(),
+                        EstadoSolicitud.CANCELADA,
+                        List.of(EstadoAsesoria.FINALIZADA, EstadoAsesoria.EVALUADA, EstadoAsesoria.CANCELADA),
+                        materiaId, modalidadFiltro, pageable);
+            };
         }
         final Set<Long> materiasTutorFinal = materiasTutor;
 
@@ -105,15 +130,64 @@ public class SolicitudService {
                 ? Map.of()
                 : propuestaRepository.countGroupedBySolicitudId(ids).stream()
                         .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+        Map<Long, Asesoria> asesorias = ids.isEmpty()
+                ? Map.of()
+                : asesoriaRepository.findBySolicitudIdIn(ids).stream()
+                        .collect(Collectors.toMap(a -> a.getSolicitud().getId(), Function.identity()));
 
         List<TutoringRequestResponse> data = resultado.getContent().stream()
-                .map(s -> mapper.toSolicitudResponse(
+                .map(s -> {
+                    Asesoria asesoria = asesorias.get(s.getId());
+                    boolean asesoriaDelViewer = asesoria != null
+                            && asesoria.getEstudiante().getId().equals(usuario.getId());
+                    return mapper.toSolicitudResponse(
+                            usuario,
+                            s,
+                            conteos.getOrDefault(s.getId(), 0L),
+                            List.of(),
+                            esTutor ? materiasTutorFinal.contains(s.getMateria().getId()) : null,
+                            asesoriaDelViewer ? mapper.toAsesoriaResponse(asesoria) : null);
+                })
+                .toList();
+
+        return PageResponse.<TutoringRequestResponse>builder()
+                .data(data)
+                .pagination(PageResponse.PaginationInfo.builder()
+                        .page(resultado.getNumber())
+                        .size(resultado.getSize())
+                        .totalElements(resultado.getTotalElements())
+                        .totalPages(resultado.getTotalPages())
+                        .build())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TutoringRequestResponse> listAcceptedForTutor(
+            String correo,
+            int page,
+            int size) {
+        Usuario usuario = findUsuario(correo);
+        if (usuario.getRol() != Rol.TUTOR) {
+            throw new ForbiddenException("Solo los tutores tienen asesorias aceptadas");
+        }
+        PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
+        Page<Asesoria> resultado = asesoriaRepository.findByTutorCorreo(
+                correo, EstadoAsesoria.CANCELADA, pageable);
+
+        List<Long> ids = resultado.getContent().stream().map(a -> a.getSolicitud().getId()).toList();
+        Map<Long, Long> conteos = ids.isEmpty()
+                ? Map.of()
+                : propuestaRepository.countGroupedBySolicitudId(ids).stream()
+                        .collect(Collectors.toMap(row -> (Long) row[0], row -> (Long) row[1]));
+
+        List<TutoringRequestResponse> data = resultado.getContent().stream()
+                .map(a -> mapper.toSolicitudResponse(
                         usuario,
-                        s,
-                        conteos.getOrDefault(s.getId(), 0L),
+                        a.getSolicitud(),
+                        conteos.getOrDefault(a.getSolicitud().getId(), 0L),
                         List.of(),
-                        usuario.getRol() == Rol.TUTOR ? materiasTutorFinal.contains(s.getMateria().getId()) : null,
-                        null))
+                        null,
+                        mapper.toAsesoriaResponse(a)))
                 .toList();
 
         return PageResponse.<TutoringRequestResponse>builder()
@@ -133,8 +207,12 @@ public class SolicitudService {
         SolicitudAsesoria solicitud = findSolicitud(id);
         checkAccess(usuario, solicitud);
         List<ProposalResponse> propuestas = loadPropuestas(usuario, solicitud);
+        Asesoria asesoria = puedeVerAsesoria(usuario, solicitud, propuestas)
+                ? asesoriaRepository.findBySolicitudId(solicitud.getId()).orElse(null)
+                : null;
         return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas,
-                profileMatch(usuario, solicitud), null);
+                profileMatch(usuario, solicitud),
+                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria));
     }
 
     @Transactional(readOnly = true)
@@ -149,14 +227,25 @@ public class SolicitudService {
     public TutoringRequestResponse cancel(String correo, Long id) {
         Usuario usuario = findUsuario(correo);
         SolicitudAsesoria solicitud = findSolicitud(id);
-        if (!solicitud.getEstudiante().getId().equals(usuario.getId())) {
-            throw new ForbiddenException("Solo el estudiante que publico la asesoria puede cancelarla");
-        }
-        if (solicitud.getEstado() == EstadoSolicitud.CONFIRMADA) {
-            throw new ConflictException("La asesoria ya fue confirmada y no se puede cancelar");
+        Asesoria asesoria = asesoriaRepository.findBySolicitudId(solicitud.getId()).orElse(null);
+        boolean owner = solicitud.getEstudiante().getId().equals(usuario.getId());
+        boolean tutorAsignado = asesoria != null
+                && asesoria.getTutor().getUsuario().getId().equals(usuario.getId());
+        if (!owner && !tutorAsignado) {
+            throw new ForbiddenException("Solo el estudiante o el tutor de la asesoria pueden cancelarla");
         }
         if (solicitud.getEstado() == EstadoSolicitud.CANCELADA) {
             throw new ConflictException("La asesoria ya fue cancelada");
+        }
+        if (asesoria != null && asesoria.getEstado() != EstadoAsesoria.PENDIENTE) {
+            throw new ConflictException("La asesoria ya fue finalizada y no se puede cancelar");
+        }
+        if (solicitud.getEstado() == EstadoSolicitud.CONFIRMADA && asesoria == null) {
+            throw new ConflictException("La asesoria ya fue confirmada y no se puede cancelar");
+        }
+        if (asesoria != null) {
+            asesoria.setEstado(EstadoAsesoria.CANCELADA);
+            asesoriaRepository.save(asesoria);
         }
         solicitud.setEstado(EstadoSolicitud.CANCELADA);
         solicitudRepository.save(solicitud);
@@ -166,18 +255,42 @@ public class SolicitudService {
         propuestaRepository.saveAll(pendientes);
 
         List<ProposalResponse> propuestas = loadPropuestas(usuario, solicitud);
-        return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas, null, null);
+        return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas, null,
+                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria));
     }
 
     private List<ProposalResponse> loadPropuestas(Usuario viewer, SolicitudAsesoria solicitud) {
-        Long tutorIdViewer = viewer.getRol() == Rol.TUTOR
-                ? tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico())
-                        .map(Tutor::getId)
-                        .orElse(null)
-                : null;
-        return propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(solicitud.getId()).stream()
+        List<Propuesta> propuestas = propuestaRepository
+                .findBySolicitudIdOrderByCreatedAtAsc(solicitud.getId());
+        boolean owner = solicitud.getEstudiante().getId().equals(viewer.getId());
+        if (owner || viewer.getRol() != Rol.TUTOR) {
+            return propuestas.stream()
+                    .map(p -> mapper.toProposalResponse(p, false))
+                    .toList();
+        }
+        Long tutorIdViewer = tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico())
+                .map(Tutor::getId)
+                .orElse(null);
+        if (tutorIdViewer == null) {
+            return List.of();
+        }
+        Long tutorAceptadoId = propuestas.stream()
+                .filter(p -> p.getEstado() == EstadoPropuesta.ACEPTADA)
+                .map(p -> p.getTutor().getId())
+                .findFirst()
+                .orElse(null);
+        boolean veTodas = tutorIdViewer.equals(tutorAceptadoId);
+        return propuestas.stream()
+                .filter(p -> veTodas || p.getTutor().getId().equals(tutorIdViewer))
                 .map(p -> mapper.toProposalResponse(p, p.getTutor().getId().equals(tutorIdViewer)))
                 .toList();
+    }
+
+    private boolean puedeVerAsesoria(Usuario viewer, SolicitudAsesoria solicitud, List<ProposalResponse> propuestas) {
+        boolean owner = solicitud.getEstudiante().getId().equals(viewer.getId());
+        boolean tutorAceptado = viewer.getRol() == Rol.TUTOR
+                && propuestas.stream().anyMatch(p -> p.isMine() && "ACEPTADA".equals(p.getEstado()));
+        return owner || tutorAceptado;
     }
 
     private Boolean profileMatch(Usuario viewer, SolicitudAsesoria solicitud) {
@@ -191,7 +304,18 @@ public class SolicitudService {
 
     private void checkAccess(Usuario usuario, SolicitudAsesoria solicitud) {
         boolean owner = solicitud.getEstudiante().getId().equals(usuario.getId());
-        if (!owner && usuario.getRol() != Rol.TUTOR) {
+        if (owner) {
+            return;
+        }
+        if (usuario.getRol() != Rol.TUTOR) {
+            throw new ForbiddenException("No tienes acceso a esta asesoria");
+        }
+        Asesoria asesoria = asesoriaRepository.findBySolicitudId(solicitud.getId()).orElse(null);
+        if (asesoria == null) {
+            return;
+        }
+        boolean tutorAsignado = asesoria.getTutor().getUsuario().getId().equals(usuario.getId());
+        if (!tutorAsignado) {
             throw new ForbiddenException("No tienes acceso a esta asesoria");
         }
     }
@@ -225,6 +349,17 @@ public class SolicitudService {
             return EstadoSolicitud.valueOf(valor.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Estado no valido: " + valor);
+        }
+    }
+
+    private VistaSolicitudes parseVista(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        try {
+            return VistaSolicitudes.valueOf(valor.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Vista no valida: " + valor);
         }
     }
 }

@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { ArrowLeft, CalendarClock, MessageCircle, Trash2, User } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
+import { AsesoriaActions } from '@/features/tutoring/components/AsesoriaActions';
 import { ProposalCard } from '@/features/tutoring/components/ProposalCard';
 import {
   acceptProposal,
@@ -16,33 +17,63 @@ import {
   fetchTutoringRequest,
   rejectProposal,
 } from '@/features/tutoring/api/tutoringApi';
-import type { Proposal, SolicitudEstado, TutoringRequest } from '@/features/tutoring/types';
+import type {
+  AsesoriaEstado,
+  Proposal,
+  TutoringRequest,
+  VistaSolicitudes,
+} from '@/features/tutoring/types';
+import { estadoCiclo } from '@/features/tutoring/lib/estadoCiclo';
 import { validateMensaje } from '@/features/tutoring/hooks/validation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { HttpError } from '@/lib/httpClient';
-
-const estadoStyles: Record<SolicitudEstado, string> = {
-  PUBLICADA: 'bg-brand-poli/10 text-brand-poli',
-  EN_PROCESO: 'bg-brand-accent/20 text-text-main',
-  CONFIRMADA: 'bg-success/10 text-success',
-  CANCELADA: 'bg-error/10 text-error',
-};
-
-const estadoLabels: Record<SolicitudEstado, string> = {
-  PUBLICADA: 'Publicada',
-  EN_PROCESO: 'En proceso',
-  CONFIRMADA: 'Confirmada',
-  CANCELADA: 'Cancelada',
-};
 
 const modalidadLabels: Record<TutoringRequest['modalidad'], string> = {
   VIRTUAL: 'Virtual',
   PRESENCIAL: 'Presencial',
 };
 
+const asesoriaEstadoLabels: Record<AsesoriaEstado, string> = {
+  PENDIENTE: 'Pendiente',
+  FINALIZADA: 'Finalizada',
+  EVALUADA: 'Evaluada',
+  CANCELADA: 'Cancelada',
+};
+
 export default function TutoringRequestDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex justify-center py-16">
+          <Spinner />
+        </div>
+      }
+    >
+      <TutoringRequestDetailContent />
+    </Suspense>
+  );
+}
+
+function TutoringRequestDetailContent() {
   const params = useParams<{ id: string }>();
   const requestId = Number(params.id);
+  const searchParams = useSearchParams();
+  const fromAgenda = searchParams.get('from') === 'agenda';
+  const vistaParam = searchParams.get('vista');
+  const vista: VistaSolicitudes | null =
+    vistaParam === 'abiertas' || vistaParam === 'coordinacion' || vistaParam === 'historial'
+      ? vistaParam
+      : null;
+  const volverHref = fromAgenda
+    ? '/tutoring/agenda'
+    : vista === 'coordinacion' || vista === 'historial'
+      ? `/tutoring/requests?vista=${vista}`
+      : '/tutoring/requests';
+  const volverLabel = fromAgenda
+    ? 'Volver a la agenda'
+    : vista === 'historial'
+      ? 'Volver al historial'
+      : 'Volver a asesorías';
   const user = useAuthStore((state) => state.user);
   const isTutor = user?.role === 'TUTOR';
 
@@ -186,11 +217,11 @@ export default function TutoringRequestDetailPage() {
         <Alert type="error">{loadError ?? 'No pudimos cargar la asesoria.'}</Alert>
         {accessDenied ? (
           <Link
-            href="/tutoring/requests"
+            href={volverHref}
             className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand-poli px-4 py-2 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-poli-hover focus:outline-none focus:ring-2 focus:ring-brand-poli"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Volver a asesorias
+            {volverLabel}
           </Link>
         ) : (
           <button
@@ -219,23 +250,24 @@ export default function TutoringRequestDetailPage() {
   const canCancel =
     isOwner && (request.estado === 'PUBLICADA' || request.estado === 'EN_PROCESO');
   const chatEnabled = request.estado === 'CONFIRMADA';
+  const ciclo = estadoCiclo(request);
 
   return (
     <div className="flex flex-col gap-6">
       <Link
-        href="/tutoring/requests"
+        href={volverHref}
         className="inline-flex w-fit items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-text-muted transition-colors duration-200 hover:text-brand-poli focus:outline-none focus:ring-2 focus:ring-brand-poli"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Volver a asesorias
+        {volverLabel}
       </Link>
 
       <section className="rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-colors duration-300 md:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${estadoStyles[request.estado]}`}
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${ciclo.className}`}
           >
-            {estadoLabels[request.estado]}
+            {ciclo.label}
           </span>
           <span className="inline-flex items-center rounded-full border border-border-color bg-bg-primary px-2.5 py-0.5 text-xs font-semibold text-text-muted">
             {modalidadLabels[request.modalidad]}
@@ -310,19 +342,27 @@ export default function TutoringRequestDetailPage() {
 
       {actionError ? <Alert type="error">{actionError}</Alert> : null}
 
-      {request.estado === 'CONFIRMADA' && acceptedProposal && (
+      {request.estado === 'CONFIRMADA' &&
+        acceptedProposal &&
+        (isOwner || acceptedProposal.isMine) && (
         <section aria-label="Propuesta aceptada" className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-text-main">Propuesta aceptada</h2>
             {request.asesoria && (
               <span className="inline-flex items-center gap-2 rounded-full bg-brand-accent/20 px-3 py-0.5 text-xs font-semibold text-text-main">
-                Asesoria #{request.asesoria.id} · Pendiente
+                Asesoria #{request.asesoria.id} · {asesoriaEstadoLabels[request.asesoria.estado]}
               </span>
             )}
           </div>
           <div className="transition-colors duration-200">
             <ProposalCard proposal={acceptedProposal} canDecide={false} />
           </div>
+        </section>
+      )}
+
+      {request.asesoria && (
+        <section aria-label="Finalización de la asesoría">
+          <AsesoriaActions request={request} onUpdated={loadRequest} />
         </section>
       )}
 

@@ -8,13 +8,18 @@ export type SolicitudEstado = 'PUBLICADA' | 'EN_PROCESO' | 'CONFIRMADA' | 'CANCE
 
 export type PropuestaEstado = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
 
-export type AsesoriaEstado = 'PENDIENTE';
+export type AsesoriaEstado = 'PENDIENTE' | 'FINALIZADA' | 'EVALUADA' | 'CANCELADA';
+
+export type VistaSolicitudes = 'abiertas' | 'coordinacion' | 'historial';
 
 export interface Asesoria {
   id: number;
   solicitudId: number;
   propuestaId: number;
   estado: AsesoriaEstado;
+  confirmadaEstudiante: boolean;
+  confirmadaTutor: boolean;
+  finalizadaAt: string | null;
   tutor: {
     id: number;
     fullName: string;
@@ -95,6 +100,7 @@ export interface TutoringRequestFilters {
   materiaId?: number;
   modalidad?: Modalidad;
   estado?: SolicitudEstado;
+  vista?: VistaSolicitudes;
   page?: number;
   size?: number;
 }

@@ -56,6 +56,9 @@ public class TutorialMapper {
                 .propuestaId(asesoria.getPropuesta().getId())
                 .estado(asesoria.getEstado().name())
                 .tutor(toTutorBrief(asesoria.getTutor()))
+                .confirmadaEstudiante(asesoria.getConfirmacionEstudianteAt() != null)
+                .confirmadaTutor(asesoria.getConfirmacionTutorAt() != null)
+                .finalizadaAt(asesoria.getFinalizadaAt())
                 .createdAt(asesoria.getCreatedAt())
                 .build();
     }

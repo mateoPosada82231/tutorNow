@@ -8,11 +8,14 @@ import co.edu.epi.tutornow.common.exception.ForbiddenException;
 import co.edu.epi.tutornow.common.exception.ResourceNotFoundException;
 import co.edu.epi.tutornow.tutorial.dto.CreateTutoringRequest;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
+import co.edu.epi.tutornow.tutorial.model.Asesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.service.SolicitudService;
@@ -42,7 +45,9 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,6 +60,8 @@ class SolicitudServiceTest {
     private SolicitudAsesoriaRepository solicitudRepository;
     @Mock
     private PropuestaRepository propuestaRepository;
+    @Mock
+    private AsesoriaRepository asesoriaRepository;
     @Mock
     private UsuarioRepository usuarioRepository;
     @Mock
@@ -189,16 +196,18 @@ class SolicitudServiceTest {
             when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
                     .thenReturn(Optional.of(estudiante));
             SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.PUBLICADA);
-            when(solicitudRepository.findFiltered(any(), any(), any(), any(), any()))
+            when(solicitudRepository.findFiltered(any(), any(), anyBoolean(), any(), any(), any(), any(), any()))
                     .thenReturn(new PageImpl<>(List.of(solicitud), PageRequest.of(0, 10), 1));
             when(propuestaRepository.countGroupedBySolicitudId(List.of(1L)))
                     .thenReturn(List.<Object[]>of(new Object[]{1L, 3L}));
 
             PageResponse<TutoringRequestResponse> page = solicitudService.list(
-                    estudiante.getCorreoElectronico(), null, null, null, 0, 10);
+                    estudiante.getCorreoElectronico(), null, null, null, null, 0, 10);
 
-            verify(solicitudRepository).findFiltered(eq(1L), any(), any(), any(), any());
-            verify(solicitudRepository, never()).findFilteredPrioritized(any(), any(), any(), any(), any());
+            verify(solicitudRepository).findFiltered(eq(1L), eq(1L), eq(false),
+                    eq(EstadoSolicitud.CANCELADA), isNull(), isNull(), isNull(), any());
+            verify(solicitudRepository, never()).findFilteredPrioritized(
+                    any(), anyBoolean(), any(), any(), any(), any(), any(), any());
             assertThat(page.getData()).hasSize(1);
             assertThat(page.getData().get(0).getPropuestasCount()).isEqualTo(3L);
             assertThat(page.getData().get(0).getIsProfileMatch()).isNull();
@@ -220,17 +229,46 @@ class SolicitudServiceTest {
                     .tema("Tiro parabolico").modalidad(Modalidad.VIRTUAL)
                     .disponibilidad("Viernes 10-12am").estado(EstadoSolicitud.PUBLICADA)
                     .createdAt(OffsetDateTime.now()).build();
-            when(solicitudRepository.findFilteredPrioritized(any(), any(), any(), any(), any()))
+            when(solicitudRepository.findFilteredPrioritized(any(), anyBoolean(), any(), any(), any(), any(), any(), any()))
                     .thenReturn(new PageImpl<>(List.of(match, otro), PageRequest.of(0, 10), 2));
 
             PageResponse<TutoringRequestResponse> page = solicitudService.list(
-                    "tutor@elpoli.edu.co", null, null, null, 0, 10);
+                    "tutor@elpoli.edu.co", null, null, null, null, 0, 10);
 
-            verify(solicitudRepository).findFilteredPrioritized(any(), any(), any(), any(), any());
+            verify(solicitudRepository).findFilteredPrioritized(eq(2L), eq(true),
+                    eq(EstadoSolicitud.CANCELADA), isNull(), isNull(), isNull(), any(), any());
             assertThat(page.getData()).hasSize(2);
             assertThat(page.getData().get(0).getIsProfileMatch()).isTrue();
             assertThat(page.getData().get(1).getIsProfileMatch()).isFalse();
             assertThat(page.getData().get(0).isOwner()).isFalse();
+        }
+
+        @Test
+        @DisplayName("El estudiante ve el estado de su asesoria en el listado")
+        void estudianteListaConAsesoria() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Tutor tutor = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(solicitudRepository.findFiltered(any(), any(), anyBoolean(), any(), any(), any(), any(), any()))
+                    .thenReturn(new PageImpl<>(List.of(solicitud), PageRequest.of(0, 10), 1));
+            when(asesoriaRepository.findBySolicitudIdIn(List.of(1L))).thenReturn(List.of(asesoria));
+
+            PageResponse<TutoringRequestResponse> page = solicitudService.list(
+                    estudiante.getCorreoElectronico(), null, null, null, null, 0, 10);
+
+            assertThat(page.getData().get(0).getAsesoria()).isNotNull();
+            assertThat(page.getData().get(0).getAsesoria().getId()).isEqualTo(20L);
+            assertThat(page.getData().get(0).getAsesoria().getEstado()).isEqualTo("PENDIENTE");
         }
 
         @Test
@@ -240,9 +278,172 @@ class SolicitudServiceTest {
                     .thenReturn(Optional.of(estudiante));
 
             assertThatThrownBy(() -> solicitudService.list(
-                    estudiante.getCorreoElectronico(), null, null, "CUALQUIERA", 0, 10))
+                    estudiante.getCorreoElectronico(), null, null, "CUALQUIERA", null, 0, 10))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Estado no valido");
+        }
+    }
+
+    @Nested
+    @DisplayName("Vistas del estudiante")
+    class VistasEstudiante {
+
+        @Test
+        @DisplayName("Abiertas consulta solo solicitudes sin asesoria")
+        void abiertasSinAsesoria() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(4L, EstadoSolicitud.PUBLICADA);
+            when(solicitudRepository.findOpenForStudent(eq(1L), eq(EstadoSolicitud.CANCELADA),
+                    isNull(), isNull(), isNull(), any()))
+                    .thenReturn(new PageImpl<>(List.of(solicitud), PageRequest.of(0, 20), 1));
+
+            PageResponse<TutoringRequestResponse> page = solicitudService.list(
+                    estudiante.getCorreoElectronico(), null, null, null, "abiertas", 0, 20);
+
+            verify(solicitudRepository).findOpenForStudent(eq(1L), eq(EstadoSolicitud.CANCELADA),
+                    isNull(), isNull(), isNull(), any());
+            verify(solicitudRepository, never()).findFiltered(any(), any(), anyBoolean(), any(), any(), any(), any(), any());
+            assertThat(page.getData()).hasSize(1);
+            assertThat(page.getData().get(0).getId()).isEqualTo(4L);
+            assertThat(page.getData().get(0).isOwner()).isTrue();
+            assertThat(page.getData().get(0).getAsesoria()).isNull();
+        }
+
+        @Test
+        @DisplayName("Coordinacion incluye la asesoria pendiente del estudiante")
+        void coordinacionConAsesoria() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Asesoria asesoria = asesoriaDe(solicitud, EstadoAsesoria.PENDIENTE);
+            when(solicitudRepository.findInCoordinationForStudent(eq(1L), eq(EstadoAsesoria.PENDIENTE),
+                    isNull(), isNull(), any()))
+                    .thenReturn(new PageImpl<>(List.of(solicitud), PageRequest.of(0, 20), 1));
+            when(asesoriaRepository.findBySolicitudIdIn(List.of(1L))).thenReturn(List.of(asesoria));
+
+            PageResponse<TutoringRequestResponse> page = solicitudService.list(
+                    estudiante.getCorreoElectronico(), null, null, null, "coordinacion", 0, 20);
+
+            verify(solicitudRepository).findInCoordinationForStudent(eq(1L),
+                    eq(EstadoAsesoria.PENDIENTE), isNull(), isNull(), any());
+            assertThat(page.getData()).hasSize(1);
+            assertThat(page.getData().get(0).getAsesoria()).isNotNull();
+            assertThat(page.getData().get(0).getAsesoria().getEstado()).isEqualTo("PENDIENTE");
+            assertThat(page.getData().get(0).getAsesoria().getTutor().getFullName()).isEqualTo("Tutor Uno");
+        }
+
+        @Test
+        @DisplayName("Historial incluye finalizadas y canceladas, con o sin asesoria")
+        void historialFinalizadasYCanceladas() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            SolicitudAsesoria finalizada = solicitudDeEstudiante(9L, EstadoSolicitud.CONFIRMADA);
+            SolicitudAsesoria cancelada = solicitudDeEstudiante(2L, EstadoSolicitud.CANCELADA);
+            Asesoria asesoriaFinalizada = asesoriaDe(finalizada, EstadoAsesoria.FINALIZADA);
+            when(solicitudRepository.findHistoryForStudent(eq(1L), eq(EstadoSolicitud.CANCELADA),
+                    eq(List.of(EstadoAsesoria.FINALIZADA, EstadoAsesoria.EVALUADA, EstadoAsesoria.CANCELADA)),
+                    isNull(), isNull(), any()))
+                    .thenReturn(new PageImpl<>(List.of(finalizada, cancelada), PageRequest.of(0, 20), 2));
+            when(asesoriaRepository.findBySolicitudIdIn(List.of(9L, 2L)))
+                    .thenReturn(List.of(asesoriaFinalizada));
+
+            PageResponse<TutoringRequestResponse> page = solicitudService.list(
+                    estudiante.getCorreoElectronico(), null, null, null, "historial", 0, 20);
+
+            verify(solicitudRepository).findHistoryForStudent(eq(1L), eq(EstadoSolicitud.CANCELADA),
+                    eq(List.of(EstadoAsesoria.FINALIZADA, EstadoAsesoria.EVALUADA, EstadoAsesoria.CANCELADA)),
+                    isNull(), isNull(), any());
+            assertThat(page.getData()).hasSize(2);
+            assertThat(page.getData().get(0).getAsesoria()).isNotNull();
+            assertThat(page.getData().get(0).getAsesoria().getEstado()).isEqualTo("FINALIZADA");
+            assertThat(page.getData().get(1).getEstado()).isEqualTo("CANCELADA");
+            assertThat(page.getData().get(1).getAsesoria()).isNull();
+        }
+
+        @Test
+        @DisplayName("Un tutor no puede consultar las vistas del estudiante (403)")
+        void tutorNoTieneVistas() {
+            Usuario tutorUsuario = Usuario.builder().id(2L)
+                    .correoElectronico("tutor@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorUsuario));
+
+            assertThatThrownBy(() -> solicitudService.list(
+                    "tutor@elpoli.edu.co", null, null, null, "historial", 0, 20))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("estudiantes");
+            verify(solicitudRepository, never()).findFiltered(any(), any(), anyBoolean(), any(), any(), any(), any(), any());
+            verify(solicitudRepository, never()).findHistoryForStudent(any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Falla ante una vista desconocida")
+        void vistaInvalida() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+
+            assertThatThrownBy(() -> solicitudService.list(
+                    estudiante.getCorreoElectronico(), null, null, null, "otra", 0, 20))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Vista no valida");
+        }
+    }
+
+    @Nested
+    @DisplayName("Asesorias aceptadas por el tutor")
+    class AsesoriasAceptadas {
+
+        @Test
+        @DisplayName("Devuelve las asesorias aceptadas con los datos de la solicitud")
+        void listaAceptadas() {
+            Usuario tutorUsuario = Usuario.builder().id(2L)
+                    .correoElectronico("tutor@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno")
+                    .rol(Rol.TUTOR).build();
+            Tutor tutor = Tutor.builder().id(5L).usuario(tutorUsuario).materias(Set.of(materiaCalculo)).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorUsuario));
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Propuesta propuesta = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Puedo ayudarte con eso")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(propuesta)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(asesoriaRepository.findByTutorCorreo(eq("tutor@elpoli.edu.co"),
+                    eq(EstadoAsesoria.CANCELADA), any()))
+                    .thenReturn(new PageImpl<>(List.of(asesoria), PageRequest.of(0, 20), 1));
+            when(propuestaRepository.countGroupedBySolicitudId(List.of(1L)))
+                    .thenReturn(List.<Object[]>of(new Object[]{1L, 1L}));
+
+            PageResponse<TutoringRequestResponse> page = solicitudService
+                    .listAcceptedForTutor("tutor@elpoli.edu.co", 0, 20);
+
+            assertThat(page.getData()).hasSize(1);
+            TutoringRequestResponse item = page.getData().get(0);
+            assertThat(item.getId()).isEqualTo(1L);
+            assertThat(item.getEstado()).isEqualTo("CONFIRMADA");
+            assertThat(item.getAsesoria()).isNotNull();
+            assertThat(item.getAsesoria().getId()).isEqualTo(20L);
+            assertThat(item.getAsesoria().getTutor().getFullName()).isEqualTo("Tutor Uno");
+            assertThat(item.getIsProfileMatch()).isNull();
+            assertThat(page.getPagination().getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("Un estudiante no puede consultar asesorias aceptadas (403)")
+        void estudianteNoTieneAceptadas() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+
+            assertThatThrownBy(() -> solicitudService
+                    .listAcceptedForTutor(estudiante.getCorreoElectronico(), 0, 20))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Solo los tutores");
+            verify(asesoriaRepository, never()).findByTutorCorreo(any(), any(), any());
         }
     }
 
@@ -328,6 +529,110 @@ class SolicitudServiceTest {
         }
 
         @Test
+        @DisplayName("El dueno cancela una asesoria en coordinacion y la asesoria pasa a CANCELADA")
+        void duenoCancelaEnCoordinacion() {
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Tutor tutor = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada));
+
+            TutoringRequestResponse response = solicitudService.cancel(estudiante.getCorreoElectronico(), 1L);
+
+            assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitud.CANCELADA);
+            assertThat(asesoria.getEstado()).isEqualTo(EstadoAsesoria.CANCELADA);
+            assertThat(response.getAsesoria().getEstado()).isEqualTo("CANCELADA");
+        }
+
+        @Test
+        @DisplayName("El tutor asignado cancela una asesoria en coordinacion")
+        void tutorAsignadoCancelaEnCoordinacion() {
+            Usuario tutorUsuario = Usuario.builder().id(2L)
+                    .correoElectronico("andres_tutor1@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build();
+            Tutor tutor = Tutor.builder().id(5L).usuario(tutorUsuario)
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+            when(tutorRepository.findByUsuario_CorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutor));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada));
+
+            TutoringRequestResponse response = solicitudService.cancel(tutorUsuario.getCorreoElectronico(), 1L);
+
+            assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitud.CANCELADA);
+            assertThat(asesoria.getEstado()).isEqualTo(EstadoAsesoria.CANCELADA);
+            assertThat(response.getEstado()).isEqualTo("CANCELADA");
+        }
+
+        @Test
+        @DisplayName("Un tutor no asignado no puede cancelar (403)")
+        void tutorAjenoNoCancela() {
+            Usuario otroTutor = Usuario.builder().id(3L)
+                    .correoElectronico("juana_tutor2@elpoli.edu.co")
+                    .nombreCompleto("Juana Gomez").rol(Rol.TUTOR).build();
+            Tutor tutor = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(otroTutor.getCorreoElectronico()))
+                    .thenReturn(Optional.of(otroTutor));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            assertThatThrownBy(() -> solicitudService.cancel(otroTutor.getCorreoElectronico(), 1L))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Solo el estudiante o el tutor");
+            assertThat(asesoria.getEstado()).isEqualTo(EstadoAsesoria.PENDIENTE);
+        }
+
+        @Test
+        @DisplayName("No se puede cancelar una asesoria ya finalizada")
+        void noCancelaFinalizada() {
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Tutor tutor = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.FINALIZADA).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            assertThatThrownBy(() -> solicitudService.cancel(estudiante.getCorreoElectronico(), 1L))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("finalizada");
+        }
+
+        @Test
         @DisplayName("Lanza 404 ante una asesoria inexistente")
         void noExiste() {
             when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
@@ -338,6 +643,186 @@ class SolicitudServiceTest {
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Asesoria no encontrada");
         }
+    }
+
+    @Nested
+    @DisplayName("Visibilidad de propuestas y asesoria")
+    class VisibilidadPropuestas {
+
+        @Test
+        @DisplayName("Un tutor no aceptado solo ve su propia propuesta")
+        void tutorNoAceptadoSoloVeSuPropuesta() {
+            Usuario viewer = Usuario.builder().id(3L)
+                    .correoElectronico("juana_tutor2@elpoli.edu.co")
+                    .nombreCompleto("Juana Gomez").rol(Rol.TUTOR).build();
+            Tutor otro = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Tutor tutorViewer = Tutor.builder().id(6L).usuario(viewer)
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.EN_PROCESO);
+            Propuesta ajena = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(otro).mensaje("Otra propuesta")
+                    .estado(EstadoPropuesta.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            Propuesta propia = Propuesta.builder()
+                    .id(8L).solicitud(solicitud).tutor(tutorViewer).mensaje("Mi propuesta")
+                    .estado(EstadoPropuesta.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(viewer));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(ajena, propia));
+            when(tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorViewer));
+
+            TutoringRequestResponse response = solicitudService.getById(viewer.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(1);
+            assertThat(response.getPropuestas().get(0).isMine()).isTrue();
+            assertThat(response.getPropuestas().get(0).getTutor().getFullName()).isEqualTo("Juana Gomez");
+            assertThat(response.getAsesoria()).isNull();
+            verify(asesoriaRepository).findBySolicitudId(1L);
+        }
+
+        @Test
+        @DisplayName("Un tutor ajeno no puede abrir una asesoria ya aceptada por otro tutor (403)")
+        void tutorAjenoNoVeAsesoriaAceptada() {
+            Usuario viewer = Usuario.builder().id(3L)
+                    .correoElectronico("juana_tutor2@elpoli.edu.co")
+                    .nombreCompleto("Juana Gomez").rol(Rol.TUTOR).build();
+            Tutor tutorAceptado = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).estudiante(estudiante).tutor(tutorAceptado)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(viewer));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            assertThatThrownBy(() -> solicitudService.getById(viewer.getCorreoElectronico(), 1L))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("No tienes acceso");
+        }
+
+        @Test
+        @DisplayName("El tutor aceptado ve todas las propuestas y su asesoria")
+        void tutorAceptadoVeTodasYSuAsesoria() {
+            Usuario viewer = Usuario.builder().id(2L)
+                    .correoElectronico("andres_tutor1@elpoli.edu.co")
+                    .nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build();
+            Tutor aceptado = Tutor.builder().id(5L).usuario(viewer)
+                    .materias(Set.of(materiaCalculo)).build();
+            Tutor otro = Tutor.builder().id(6L)
+                    .usuario(Usuario.builder().id(3L).nombreCompleto("Tutor Dos").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(aceptado).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Propuesta rechazada = Propuesta.builder()
+                    .id(8L).solicitud(solicitud).tutor(otro).mensaje("Otra propuesta")
+                    .estado(EstadoPropuesta.RECHAZADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(aceptado)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(viewer));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada, rechazada));
+            when(tutorRepository.findByUsuario_CorreoElectronico(viewer.getCorreoElectronico()))
+                    .thenReturn(Optional.of(aceptado));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            TutoringRequestResponse response = solicitudService.getById(viewer.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(2);
+            assertThat(response.getPropuestas())
+                    .anyMatch(p -> p.isMine() && "ACEPTADA".equals(p.getEstado()));
+            assertThat(response.getAsesoria()).isNotNull();
+            assertThat(response.getAsesoria().getTutor().getFullName()).isEqualTo("Tutor Uno");
+        }
+
+        @Test
+        @DisplayName("Un tutor que publico la demanda (dueno) ve todas las propuestas")
+        void tutorDuenoVeTodas() {
+            Usuario tutorDueno = Usuario.builder().id(3L)
+                    .correoElectronico("tutor_dueno@elpoli.edu.co")
+                    .nombreCompleto("Tutor Dueno").rol(Rol.TUTOR).build();
+            Tutor otro = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            SolicitudAsesoria solicitud = SolicitudAsesoria.builder()
+                    .id(1L).estudiante(tutorDueno).materia(materiaCalculo)
+                    .tema("Derivadas parciales").modalidad(Modalidad.VIRTUAL)
+                    .disponibilidad("Lunes y miercoles 2-4pm")
+                    .estado(EstadoSolicitud.EN_PROCESO).createdAt(OffsetDateTime.now()).build();
+            Propuesta propuesta = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(otro).mensaje("Puedo ayudarte")
+                    .estado(EstadoPropuesta.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(tutorDueno.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorDueno));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(propuesta));
+
+            TutoringRequestResponse response = solicitudService
+                    .getById(tutorDueno.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(1);
+            assertThat(response.getPropuestas().get(0).isMine()).isFalse();
+            assertThat(response.getPropuestas().get(0).getTutor().getFullName()).isEqualTo("Tutor Uno");
+        }
+
+        @Test
+        @DisplayName("El estudiante dueño ve todas las propuestas y la asesoria")
+        void duenoVeTodasYSuAsesoria() {
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.CONFIRMADA);
+            Tutor tutor = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                    .materias(Set.of(materiaCalculo)).build();
+            Propuesta aceptada = Propuesta.builder()
+                    .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Gane la propuesta")
+                    .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+            Propuesta rechazada = Propuesta.builder()
+                    .id(8L).solicitud(solicitud).tutor(tutor).mensaje("Otra propuesta")
+                    .estado(EstadoPropuesta.RECHAZADA).createdAt(OffsetDateTime.now()).build();
+            Asesoria asesoria = Asesoria.builder()
+                    .id(20L).solicitud(solicitud).propuesta(aceptada)
+                    .estudiante(estudiante).tutor(tutor)
+                    .estado(EstadoAsesoria.PENDIENTE).createdAt(OffsetDateTime.now()).build();
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(solicitudRepository.findById(1L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L))
+                    .thenReturn(List.of(aceptada, rechazada));
+            when(asesoriaRepository.findBySolicitudId(1L)).thenReturn(Optional.of(asesoria));
+
+            TutoringRequestResponse response = solicitudService
+                    .getById(estudiante.getCorreoElectronico(), 1L);
+
+            assertThat(response.getPropuestas()).hasSize(2);
+            assertThat(response.getPropuestas()).allMatch(p -> !p.isMine());
+            assertThat(response.getAsesoria()).isNotNull();
+            assertThat(response.getAsesoria().getId()).isEqualTo(20L);
+        }
+    }
+
+    private Asesoria asesoriaDe(SolicitudAsesoria solicitud, EstadoAsesoria estado) {
+        Tutor tutor = Tutor.builder().id(5L)
+                .usuario(Usuario.builder().id(2L).nombreCompleto("Tutor Uno").rol(Rol.TUTOR).build())
+                .materias(Set.of(materiaCalculo)).build();
+        Propuesta propuesta = Propuesta.builder()
+                .id(7L).solicitud(solicitud).tutor(tutor).mensaje("Gane la propuesta")
+                .estado(EstadoPropuesta.ACEPTADA).createdAt(OffsetDateTime.now()).build();
+        return Asesoria.builder()
+                .id(20L).solicitud(solicitud).propuesta(propuesta)
+                .estudiante(solicitud.getEstudiante()).tutor(tutor)
+                .estado(estado).createdAt(OffsetDateTime.now()).build();
     }
 
     private SolicitudAsesoria solicitudDeEstudiante(Long id, EstadoSolicitud estado) {

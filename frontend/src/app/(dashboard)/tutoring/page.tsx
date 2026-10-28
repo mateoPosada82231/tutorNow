@@ -115,8 +115,8 @@ export default function TutorPanelPage() {
         <TutorCard
           href="/tutoring/agenda"
           icon={CalendarClock}
-          title="Mi agenda"
-          description="Configura tus horarios disponibles para que los estudiantes agenden asesorias."
+          title="Disponibilidad y asesorías"
+          description="Configura tus horarios disponibles y consulta las asesorías aceptadas por los estudiantes."
         />
         <TutorCard
           icon={Star}
