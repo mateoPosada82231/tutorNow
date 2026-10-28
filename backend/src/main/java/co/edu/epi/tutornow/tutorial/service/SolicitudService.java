@@ -16,6 +16,7 @@ import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.model.VistaSolicitudes;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
@@ -81,15 +82,20 @@ public class SolicitudService {
             Long materiaId,
             String modalidad,
             String estado,
+            String vista,
             int page,
             int size) {
         Usuario usuario = findUsuario(correo);
         Modalidad modalidadFiltro = parseModalidad(modalidad);
         EstadoSolicitud estadoFiltro = parseEstado(estado);
+        VistaSolicitudes vistaFiltro = parseVista(vista);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
 
         Set<Long> materiasTutor = Set.of();
         boolean esTutor = usuario.getRol() == Rol.TUTOR;
+        if (vistaFiltro != null && usuario.getRol() != Rol.ESTUDIANTE) {
+            throw new ForbiddenException("Las vistas de asesorias son para estudiantes");
+        }
         Page<SolicitudAsesoria> resultado;
         if (esTutor) {
             Tutor tutor = tutorRepository.findByUsuario_CorreoElectronico(correo).orElse(null);
@@ -102,9 +108,20 @@ public class SolicitudService {
                     : solicitudRepository.findFilteredPrioritized(usuario.getId(), true,
                             EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro,
                             List.copyOf(materiasTutor), pageable);
-        } else {
+        } else if (vistaFiltro == null) {
             resultado = solicitudRepository.findFiltered(usuario.getId(), usuario.getId(), false,
                     EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable);
+        } else {
+            resultado = switch (vistaFiltro) {
+                case ABIERTAS -> solicitudRepository.findOpenForStudent(usuario.getId(),
+                        EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable);
+                case COORDINACION -> solicitudRepository.findInCoordinationForStudent(usuario.getId(),
+                        EstadoAsesoria.PENDIENTE, materiaId, modalidadFiltro, pageable);
+                case HISTORIAL -> solicitudRepository.findHistoryForStudent(usuario.getId(),
+                        EstadoSolicitud.CANCELADA,
+                        List.of(EstadoAsesoria.FINALIZADA, EstadoAsesoria.EVALUADA, EstadoAsesoria.CANCELADA),
+                        materiaId, modalidadFiltro, pageable);
+            };
         }
         final Set<Long> materiasTutorFinal = materiasTutor;
 
@@ -332,6 +349,17 @@ public class SolicitudService {
             return EstadoSolicitud.valueOf(valor.trim().toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Estado no valido: " + valor);
+        }
+    }
+
+    private VistaSolicitudes parseVista(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        try {
+            return VistaSolicitudes.valueOf(valor.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Vista no valida: " + valor);
         }
     }
 }

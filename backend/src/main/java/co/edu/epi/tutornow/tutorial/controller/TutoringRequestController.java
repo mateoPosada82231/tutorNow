@@ -46,10 +46,11 @@ public class TutoringRequestController {
             @RequestParam(required = false) Long materiaId,
             @RequestParam(required = false) String modalidad,
             @RequestParam(required = false) String estado,
+            @RequestParam(required = false) String vista,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         PageResponse<TutoringRequestResponse> response = solicitudService.list(
-                userDetails.getUsername(), materiaId, modalidad, estado, page, size);
+                userDetails.getUsername(), materiaId, modalidad, estado, vista, page, size);
         return ResponseEntity.ok(response);
     }
 
