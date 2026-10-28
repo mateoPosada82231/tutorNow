@@ -10,6 +10,8 @@ export type PropuestaEstado = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
 
 export type AsesoriaEstado = 'PENDIENTE' | 'FINALIZADA' | 'EVALUADA' | 'CANCELADA';
 
+export type VistaSolicitudes = 'abiertas' | 'coordinacion' | 'historial';
+
 export interface Asesoria {
   id: number;
   solicitudId: number;
@@ -98,6 +100,7 @@ export interface TutoringRequestFilters {
   materiaId?: number;
   modalidad?: Modalidad;
   estado?: SolicitudEstado;
+  vista?: VistaSolicitudes;
   page?: number;
   size?: number;
 }

@@ -12,6 +12,7 @@ export type {
   TutoringRequest,
   TutoringRequestFilters,
   TutoringRequestRequest,
+  VistaSolicitudes,
 } from './types';
 export {
   fetchCatalogoMaterias,
@@ -30,6 +31,7 @@ export { estadoCiclo } from './lib/estadoCiclo';
 export type { EstadoCiclo } from './lib/estadoCiclo';
 export { AcceptedRequestCard } from './components/AcceptedRequestCard';
 export { AsesoriaActions } from './components/AsesoriaActions';
+export { HistoryCard } from './components/HistoryCard';
 export { ProposalCard } from './components/ProposalCard';
 export { PublishRequestForm } from './components/PublishRequestForm';
 export { RequestCard } from './components/RequestCard';

@@ -113,6 +113,28 @@ describe('AcceptedRequestCard', () => {
     expect(screen.queryByRole('button', { name: /cancelar asesoría/i })).not.toBeInTheDocument();
   });
 
+  it('para el estudiante muestra al tutor asignado', () => {
+    render(<AcceptedRequestCard request={buildRequest({ isOwner: true })} />);
+
+    expect(screen.getByText(/^tutor:$/i)).toBeInTheDocument();
+    expect(screen.getByText('Tutor User')).toBeInTheDocument();
+    expect(screen.queryByText(/^estudiante:$/i)).not.toBeInTheDocument();
+  });
+
+  it('permite enlazar de vuelta a la vista de coordinacion', () => {
+    render(
+      <AcceptedRequestCard
+        request={buildRequest()}
+        detailHref="/tutoring/requests/3?from=requests&vista=coordinacion"
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: /ver asesor/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests/3?from=requests&vista=coordinacion',
+    );
+  });
+
   it('muestra la asesoria cancelada sin acciones', () => {
     render(
       <AcceptedRequestCard

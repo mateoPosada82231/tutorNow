@@ -18,6 +18,7 @@ export function fetchTutoringRequests(
   if (filters.materiaId) params.set('materiaId', String(filters.materiaId));
   if (filters.modalidad) params.set('modalidad', filters.modalidad);
   if (filters.estado) params.set('estado', filters.estado);
+  if (filters.vista) params.set('vista', filters.vista);
   params.set('page', String(filters.page ?? 0));
   params.set('size', String(filters.size ?? 10));
   return httpClient.get<Page<TutoringRequest>>(`/tutoring-requests?${params.toString()}`, {
