@@ -128,6 +128,28 @@ Implementado en `users/` + `tutors/` + `catalog/` (Materia). Migración `V4__cre
 - `TutorResponse {id, biografia, materias[{id,label}], createdAt}`; materias LAZY mapeadas dentro de la transacción.
 - CRÍTICO: `@JoinTable(name = "tutor_materias", joinColumns='tutor_id', inverseJoinColumns='materia_id')` debe coincidir con la migración (tests usan H2 create-drop, no Flyway).
 
+## Decisiones de chat (Sprint 4, 2026-10-28)
+
+Implementado en `chat/` + `tutorial/port/`. Migracion `V10__create_chat_tables.sql`.
+
+### Alcance
+- Un hilo por `Asesoria`. `chatId == asesoriaId`; **no** existe tabla `conversaciones`.
+- No hay mensajeria libre usuario↔tutor ni boton "contactar tutor": el chat nace cuando nace la asesoria.
+
+### Frontera entre modulos
+- `chat/` no toca `tutorial.model` ni `tutorial.repository`. Lee la asesoria por `tutorial/port/AsesoriaChatPort` (`requireParticipante`, `listarPorUsuario`), implementado en `tutorial/service/AsesoriaChatAdapter`.
+- Consecuencia practica: el tutor participa por `asesoria.tutor.usuario.id`, **no** por `tutor.id`.
+
+### Persistencia
+- `mensajes`: `asesoria_id`, `emisor_id`, `contenido`, `client_message_id`, `created_at`. UNIQUE `(asesoria_id, client_message_id)` para idempotencia; indice `(asesoria_id, id DESC)` para paginar.
+- `chat_lecturas`: PK compuesta `(asesoria_id, usuario_id)` + `ultimo_leido_id`. El cursor nunca retrocede.
+- Paginacion por `id`, nunca por `created_at` ni por `OFFSET`.
+
+### Tiempo real
+- SSE (`ChatStreamService`), no WebSocket/STOMP: el stack es Spring MVC servlet con JWT stateless y no hay broker.
+- El evento se publica con `ApplicationEventPublisher` y se emite con `@TransactionalEventListener(AFTER_COMMIT)` para no empujar mensajes que luego revierten.
+- Los emisores viven en memoria: un solo nodo. En multi-instancia habria que usar un broker (Redis pub/sub) o sticky sessions.
+
 ## Excepciones
 ```java
 @RestControllerAdvice

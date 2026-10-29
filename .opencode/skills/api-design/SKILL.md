@@ -96,12 +96,26 @@ POST   /api/v1/reviews                     # Crear reseña
 GET    /api/v1/reviews/user/{userId}       # Resenas de un usuario
 ```
 
-### Chat
+### Chat (IMPLEMENTADO Sprint 4)
+
+Un hilo por Asesoria. `chatId == asesoriaId`: no existe tabla `conversaciones`. Solo las dos partes de la asesoria acceden; cualquier otro usuario autenticado recibe 403.
+
 ```
-GET    /api/v1/chats                       # Mis chats activos
-GET    /api/v1/chats/{id}                  # Mensajes del chat
-POST   /api/v1/chats/{id}/messages         # Enviar mensaje
+GET    /api/v1/chats                                   # Mis hilos activos
+GET    /api/v1/chats/{id}/messages?before=&size=30     # Historial (keyset por id)
+POST   /api/v1/chats/{id}/messages                     # Enviar -> 201
+PATCH  /api/v1/chats/{id}/read                         # Marcar leido -> 204
+GET    /api/v1/chats/stream                            # SSE de mensajes nuevos
 ```
+
+Notas acordadas para chat:
+- `chatId` es el `id` de la asesoria; no hay endpoints de creacion ni de borrado de hilo
+- Escritura permitida solo en estado `PENDIENTE`. `FINALIZADA` y `EVALUADA` son de solo lectura (409). `CANCELADA` rechaza escritura (409) pero conserva el historial legible
+- `POST` es idempotente por `clientMessageId`: reenviar el mismo par `(asesoriaId, clientMessageId)` devuelve el mensaje guardado y no duplica ni republica
+- Paginacion keyset, no offset: `before` es el `id` del mensaje mas antiguo ya cargado. `size` por defecto 30, maximo 50. La respuesta trae `{data, pagination: {size, hasMore, nextBefore}}`; `data` va en orden cronologico ascendente
+- `noLeidos` cuenta mensajes con `id > ultimo_leido_id` y `emisor_id != usuarioId`; el cursor de lectura nunca retrocede
+- El stream SSE autentica con el header `Authorization` estandar. No usar `EventSource` nativo en el cliente: no permite headers, usar `fetch` con `text/event-stream`
+- `contenido`: 1-2000 caracteres, se recorta antes de guardar y se renderiza como texto plano
 
 ### Admin
 ```
