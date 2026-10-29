@@ -3,10 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GlobalLoadingProvider } from './GlobalLoadingProvider';
 import { resetGlobalLoading } from '@/lib/globalLoading';
 
-const navigation = vi.hoisted(() => ({ path: '/dashboard' }));
+const navigation = vi.hoisted(() => ({ path: '/tutoring/requests', search: '' }));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => navigation.path,
+  useSearchParams: () => new URLSearchParams(navigation.search),
 }));
 
 function renderWithLink(href: string, label: string) {
@@ -22,7 +23,8 @@ function renderWithLink(href: string, label: string) {
 describe('GlobalLoadingProvider', () => {
   beforeEach(() => {
     resetGlobalLoading();
-    navigation.path = '/dashboard';
+    navigation.path = '/tutoring/requests';
+    navigation.search = '';
     vi.useFakeTimers();
   });
 
@@ -31,9 +33,9 @@ describe('GlobalLoadingProvider', () => {
   });
 
   it('no muestra la rueda durante el primer segundo de navegacion', () => {
-    renderWithLink('/tutoring/requests', 'Asesorias');
+    renderWithLink('/dashboard', 'Panel');
 
-    fireEvent.click(screen.getByRole('link', { name: 'Asesorias' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Panel' }));
     act(() => {
       vi.advanceTimersByTime(900);
     });
@@ -42,9 +44,9 @@ describe('GlobalLoadingProvider', () => {
   });
 
   it('muestra la rueda si la vista tarda mas de un segundo en cargar', () => {
-    renderWithLink('/tutoring/requests', 'Asesorias');
+    renderWithLink('/dashboard', 'Panel');
 
-    fireEvent.click(screen.getByRole('link', { name: 'Asesorias' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Panel' }));
     act(() => {
       vi.advanceTimersByTime(1100);
     });
@@ -52,19 +54,44 @@ describe('GlobalLoadingProvider', () => {
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
   });
 
-  it('oculta la rueda cuando la vista siguiente ya cargo', () => {
-    const { rerender } = renderWithLink('/tutoring/requests', 'Asesorias');
+  it('oculta la rueda cuando termina de cargar otra ruta', () => {
+    const { rerender } = renderWithLink('/dashboard', 'Panel');
 
-    fireEvent.click(screen.getByRole('link', { name: 'Asesorias' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Panel' }));
     act(() => {
       vi.advanceTimersByTime(1100);
     });
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
 
-    navigation.path = '/tutoring/requests';
+    navigation.path = '/dashboard';
     rerender(
       <GlobalLoadingProvider>
-        <p>Asesorias cargadas</p>
+        <p>Panel cargado</p>
+      </GlobalLoadingProvider>,
+    );
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(screen.queryByText('Cargando...')).not.toBeInTheDocument();
+  });
+
+  it('oculta la rueda cuando solo cambia el query de la misma ruta', () => {
+    const { rerender } = renderWithLink('/tutoring/requests?vista=historial', 'Historial');
+
+    fireEvent.click(screen.getByRole('link', { name: 'Historial' }));
+    act(() => {
+      vi.advanceTimersByTime(1100);
+    });
+    expect(screen.getByText('Cargando...')).toBeInTheDocument();
+
+    navigation.search = 'vista=historial';
+    rerender(
+      <GlobalLoadingProvider>
+        <p>Historial cargado</p>
       </GlobalLoadingProvider>,
     );
     act(() => {

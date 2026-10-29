@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { useGlobalLoading } from '@/hooks/useGlobalLoading';
 import { finishNavigation, startNavigation } from '@/lib/globalLoading';
 
 const SHOW_DELAY_MS = 1000;
 const MIN_VISIBLE_MS = 350;
-const NAVIGATION_TIMEOUT_MS = 10000;
+const NAVIGATION_TIMEOUT_MS = 6000;
 
 function isInternalNavigationClick(event: MouseEvent): boolean {
   if (event.defaultPrevented || event.button !== 0) return false;
@@ -29,8 +29,19 @@ function isInternalNavigationClick(event: MouseEvent): boolean {
   return url.pathname !== window.location.pathname || url.search !== window.location.search;
 }
 
-export function GlobalLoadingProvider({ children }: { children: React.ReactNode }) {
+function NavigationWatcher() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlKey = `${pathname}?${searchParams.toString()}`;
+
+  useEffect(() => {
+    finishNavigation();
+  }, [urlKey]);
+
+  return null;
+}
+
+export function GlobalLoadingProvider({ children }: { children: React.ReactNode }) {
   const busy = useGlobalLoading();
   const [visible, setVisible] = useState(false);
   const shownAt = useRef(0);
@@ -52,10 +63,6 @@ export function GlobalLoadingProvider({ children }: { children: React.ReactNode 
   }, [busy, visible]);
 
   useEffect(() => {
-    finishNavigation();
-  }, [pathname]);
-
-  useEffect(() => {
     function handleClick(event: MouseEvent) {
       if (!isInternalNavigationClick(event)) return;
       startNavigation();
@@ -68,6 +75,9 @@ export function GlobalLoadingProvider({ children }: { children: React.ReactNode 
 
   return (
     <>
+      <Suspense fallback={null}>
+        <NavigationWatcher />
+      </Suspense>
       {children}
       <span role="status" aria-live="polite" className="sr-only">
         {busy ? 'Cargando, por favor espera' : ''}
