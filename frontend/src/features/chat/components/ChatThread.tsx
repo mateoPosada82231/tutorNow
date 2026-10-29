@@ -199,7 +199,7 @@ export function ChatThread({ asesoriaId, initialThread, showBackButton, onBack }
   return (
     <div className="flex h-full flex-col">
       {showBackButton && onBack && (
-        <header className="flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface px-4">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface">
           <button
             onClick={onBack}
             className="p-2 rounded-lg text-text-muted hover:text-brand-poli hover:bg-brand-poli/10 transition-colors"
@@ -220,7 +220,7 @@ export function ChatThread({ asesoriaId, initialThread, showBackButton, onBack }
       <div
         ref={listRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-6"
+        className="flex-1 overflow-y-auto space-y-6"
       >
         {hasMore && (
           <div className="flex justify-center pt-2">

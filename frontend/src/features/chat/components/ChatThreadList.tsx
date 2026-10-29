@@ -20,7 +20,7 @@ export function ChatThreadList({ threads, selectedId, onSelect }: ChatThreadList
 
   if (threads.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3 text-center flex-1">
+      <div className="flex flex-col items-center justify-center gap-3 text-center flex-1">
         <MessageSquare className="h-12 w-12 text-text-muted" aria-hidden="true" />
         <p className="text-text-main">No tienes chats activos</p>
         <p className="text-sm text-text-muted">
@@ -31,7 +31,7 @@ export function ChatThreadList({ threads, selectedId, onSelect }: ChatThreadList
   }
 
   return (
-    <div className="flex flex-col gap-2 p-3 overflow-y-auto flex-1">
+    <div className="flex flex-col gap-2 overflow-y-auto flex-1">
       {threads.map((thread) => (
         <ChatThreadCard
           key={thread.asesoriaId}

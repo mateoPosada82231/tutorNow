@@ -94,7 +94,7 @@ export default function ChatsSplitView() {
       // --- THREAD LIST (full screen) ---
       return (
         <div className="flex h-[calc(100vh-4rem)] flex-col bg-bg-primary">
-          <header className="flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface px-4">
+          <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface">
             <h1 className="text-lg font-semibold text-text-main">Chats</h1>
           </header>
           <div className="flex-1 overflow-y-auto">
@@ -127,7 +127,7 @@ export default function ChatsSplitView() {
     <div className="flex h-[calc(100vh-4rem)] bg-bg-primary overflow-hidden">
       {/* Sidebar - Lista de chats */}
       <aside className="w-full md:w-96 lg:w-80 flex flex-col border-r border-border-color bg-bg-surface hidden md:flex">
-        <div className="flex h-16 items-center gap-3 border-b border-border-color px-4">
+        <div className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface">
           <h1 className="text-lg font-semibold text-text-main">Chats</h1>
           {selectedId !== null && (
             <button
@@ -156,10 +156,10 @@ export default function ChatsSplitView() {
             initialThread={threads.find(t => t.asesoriaId === selectedId)}
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-bg-primary px-6 text-center">
+          <div className="flex h-full items-center justify-center bg-bg-primary text-center">
             <div className="max-w-xs">
               <svg className="mx-auto h-16 w-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9 8s9 3.582 9 8z" />
               </svg>
               <h2 className="mt-4 text-xl font-semibold text-text-main">Selecciona un chat</h2>
               <p className="mt-2 text-text-muted">Elige una conversación en la lista para empezar a chatear</p>
