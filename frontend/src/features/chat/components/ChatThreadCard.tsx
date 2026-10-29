@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MessageSquare, X, Check, AlertCircle } from 'lucide-react';
@@ -8,10 +7,11 @@ import type { ChatResumen } from '../types';
 
 interface ChatThreadCardProps {
   thread: ChatResumen;
+  isSelected?: boolean;
   onClick?: () => void;
 }
 
-export function ChatThreadCard({ thread, onClick }: ChatThreadCardProps) {
+export function ChatThreadCard({ thread, isSelected, onClick }: ChatThreadCardProps) {
   const fecha = thread.ultimoMensajeAt
     ? formatDistanceToNow(new Date(thread.ultimoMensajeAt), { addSuffix: true, locale: es })
     : '';
@@ -25,19 +25,21 @@ export function ChatThreadCard({ thread, onClick }: ChatThreadCardProps) {
 
   const estado = estadoLabels[thread.estado] ?? { label: thread.estado, className: 'bg-gray-500/10 text-gray-500' };
 
+  const baseClasses = `flex gap-3 p-3 rounded-xl border transition-colors duration-200 ${
+    isSelected
+      ? 'bg-brand-poli/5 border-brand-poli/30'
+      : 'bg-bg-surface border-border-color hover:bg-brand-poli/5 hover:border-brand-poli/20'
+  }`;
+
   return (
-    <Link
-      href={`/tutoring/chats/${thread.asesoriaId}`}
-      onClick={(e) => {
-        if (onClick) {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-      className="group flex gap-3 p-4 rounded-xl border border-border-color bg-bg-surface transition-colors duration-200 hover:border-brand-poli/50 hover:bg-brand-poli/5"
+    <button
+      type="button"
+      onClick={onClick}
+      className={baseClasses}
+      aria-pressed={isSelected}
     >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-poli/10">
-        <MessageSquare className="h-6 w-6 text-brand-poli" aria-hidden="true" />
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-poli/10">
+        <MessageSquare className="h-5 w-5 text-brand-poli" aria-hidden="true" />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -57,7 +59,7 @@ export function ChatThreadCard({ thread, onClick }: ChatThreadCardProps) {
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${estado.className}`}>
             {estado.label}
           </span>
@@ -76,13 +78,13 @@ export function ChatThreadCard({ thread, onClick }: ChatThreadCardProps) {
         </div>
 
         {thread.ultimoMensaje && (
-          <p className="mt-2 truncate text-sm text-text-muted">{thread.ultimoMensaje}</p>
+          <p className="mt-1.5 truncate text-sm text-text-muted">{thread.ultimoMensaje}</p>
         )}
 
         {fecha && (
-          <p className="mt-1 text-xs text-text-muted">{fecha}</p>
+          <p className="mt-0.5 text-xs text-text-muted">{fecha}</p>
         )}
       </div>
-    </Link>
+    </button>
   );
 }

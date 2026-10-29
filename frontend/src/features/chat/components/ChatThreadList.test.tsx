@@ -1,13 +1,8 @@
 'use client';
 
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { ChatThreadList } from './ChatThreadList';
-import { fetchChats } from '../api/chatApi';
-import { useChatUnreadStore } from '../stores/useChatUnreadStore';
 import type { ChatResumen } from '../types';
-
-vi.mock('../api/chatApi');
-vi.mock('../stores/useChatUnreadStore');
 
 const mockThreads: ChatResumen[] = [
   {
@@ -35,53 +30,42 @@ const mockThreads: ChatResumen[] = [
 ];
 
 describe('ChatThreadList', () => {
+  const onSelect = vi.fn();
+
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useChatUnreadStore).mockReturnValue({
-      unreadCounts: {},
-      setCount: vi.fn(),
-      getTotal: vi.fn(() => 2),
-      increment: vi.fn(),
-    });
   });
 
-  it('muestra loading mientras carga', () => {
-    vi.mocked(fetchChats).mockImplementation(() => new Promise(() => {}));
-    render(<ChatThreadList />);
-    expect(screen.getByText('Cargando chats...')).toBeInTheDocument();
-  });
-
-  it('renderiza la lista de hilos cuando carga exitosamente', async () => {
-    vi.mocked(fetchChats).mockResolvedValue(mockThreads);
-    render(<ChatThreadList />);
-    await waitFor(() => expect(screen.getByText('Andres Tutor')).toBeInTheDocument());
+  it('renderiza la lista de hilos cuando recibe threads', () => {
+    render(<ChatThreadList threads={mockThreads} selectedId={null} onSelect={onSelect} />);
+    expect(screen.getByText('Andres Tutor')).toBeInTheDocument();
     expect(screen.getByText('Maria Tutor')).toBeInTheDocument();
     expect(screen.getByText('Calculo — Derivadas')).toBeInTheDocument();
     expect(screen.getByText('Fisica — Cinematica')).toBeInTheDocument();
   });
 
-  it('muestra estado vacio cuando no hay hilos', async () => {
-    vi.mocked(fetchChats).mockResolvedValue([]);
-    render(<ChatThreadList />);
-    await waitFor(() => expect(screen.getByText('No tienes chats activos')).toBeInTheDocument());
+  it('muestra estado vacio cuando no hay hilos', () => {
+    render(<ChatThreadList threads={[]} selectedId={null} onSelect={onSelect} />);
+    expect(screen.getByText('No tienes chats activos')).toBeInTheDocument();
   });
 
-  it('muestra error cuando la carga falla', async () => {
-    vi.mocked(fetchChats).mockRejectedValue(new Error('Network error'));
-    render(<ChatThreadList />);
-    await waitFor(() => expect(screen.getByText('No se pudieron cargar los chats')).toBeInTheDocument());
+  it('llama onSelect al hacer click en un hilo', () => {
+    render(<ChatThreadList threads={mockThreads} selectedId={null} onSelect={onSelect} />);
+    const first = screen.getAllByRole('button')[0];
+    first.click();
+    expect(onSelect).toHaveBeenCalledWith(20);
   });
 
-  it('sincroniza contadores de no leidos con el store', async () => {
-    vi.mocked(fetchChats).mockResolvedValue(mockThreads);
-    const setCount = vi.fn();
-    vi.mocked(useChatUnreadStore).mockReturnValue({
-      unreadCounts: { 20: 5 },
-      setCount,
-      getTotal: vi.fn(() => 5),
-      increment: vi.fn(),
-    });
-    render(<ChatThreadList />);
-    await waitFor(() => expect(setCount).toHaveBeenCalledWith(20, 2));
+  it('aplica estilo seleccionado al hilo activo', () => {
+    render(<ChatThreadList threads={mockThreads} selectedId={20} onSelect={onSelect} />);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(buttons[1]).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('no renderiza loading ni error (componente controlado)', () => {
+    render(<ChatThreadList threads={mockThreads} selectedId={null} onSelect={onSelect} />);
+    expect(screen.queryByText('Cargando chats...')).not.toBeInTheDocument();
+    expect(screen.queryByText('No se pudieron cargar los chats')).not.toBeInTheDocument();
   });
 });
