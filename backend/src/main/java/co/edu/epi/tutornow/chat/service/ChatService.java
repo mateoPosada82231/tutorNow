@@ -1,5 +1,6 @@
 package co.edu.epi.tutornow.chat.service;
 
+import co.edu.epi.tutornow.auth.service.EmailService;
 import co.edu.epi.tutornow.chat.dto.ChatResumenResponse;
 import co.edu.epi.tutornow.chat.dto.EmisorBriefResponse;
 import co.edu.epi.tutornow.chat.dto.EnviarMensajeRequest;
@@ -36,6 +37,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +52,7 @@ public class ChatService {
     private final UsuarioRepository usuarioRepository;
     private final AsesoriaChatPort asesoriaChatPort;
     private final ChatStreamService chatStreamService;
+    private final EmailService emailService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
@@ -172,6 +175,14 @@ public class ChatService {
                 participante.estudianteId(),
                 participante.tutorUsuarioId(),
                 response));
+
+        // Notificación por correo al otro participante (simulada)
+        Long otroUsuarioId = emisor.getId().equals(participante.estudianteId())
+                ? participante.tutorUsuarioId()
+                : participante.estudianteId();
+        usuarioRepository.findById(otroUsuarioId).ifPresent(destinatario ->
+                emailService.sendNewMessageNotification(destinatario, emisor.getNombreCompleto(), contenido, asesoriaId));
+
         return response;
     }
 

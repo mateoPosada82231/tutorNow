@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Navbar } from './Navbar';
@@ -31,25 +31,19 @@ describe('Navbar', () => {
     });
   });
 
-  it('muestra la marca, la navegacion y el toggle de tema', () => {
+  it('muestra la marca, el botón de menú principal y el toggle de tema', () => {
     render(<Navbar />);
 
     expect(screen.getByText('tutorNow')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /panel/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /asesorías/i })).toHaveAttribute(
-      'href',
-      '/tutoring/requests',
-    );
-    expect(
-      screen.getByRole('button', { name: /cambiar a tema oscuro/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /menú principal/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cambiar a tema oscuro/i })).toBeInTheDocument();
   });
 
   it('abre el menu de usuario con sus datos, accesos y cierra sesion', async () => {
     const user = userEvent.setup();
     render(<Navbar />);
 
-    await user.click(screen.getByRole('button', { name: /menu de usuario/i }));
+    await user.click(screen.getByTestId('user-menu-button'));
     expect(await screen.findByText('ana@elpoli.edu.co')).toBeInTheDocument();
     expect(screen.getByText('Estudiante')).toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /mi perfil/i })).toHaveAttribute(
@@ -57,7 +51,7 @@ describe('Navbar', () => {
       '/profile',
     );
 
-    await user.click(screen.getByRole('menuitem', { name: /cerrar sesion/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /cerrar sesión/i }));
     expect(useAuthStore.getState().token).toBeNull();
     expect(pushMock).toHaveBeenCalledWith('/login');
   });
@@ -71,7 +65,7 @@ describe('Navbar', () => {
       </div>,
     );
 
-    await user.click(screen.getByRole('button', { name: /menu de usuario/i }));
+    await user.click(screen.getByTestId('user-menu-button'));
     expect(await screen.findByText('ana@elpoli.edu.co')).toBeInTheDocument();
 
     await user.click(screen.getByText('Fuera'));
@@ -91,6 +85,10 @@ describe('Navbar', () => {
       isAuthenticated: true,
     });
     render(<Navbar />);
+
+    // Open main menu dropdown via hover on the menu button (group hover)
+    const menuButton = screen.getByRole('button', { name: /menú principal/i });
+    fireEvent.mouseEnter(menuButton);
 
     expect(screen.getByRole('link', { name: /panel de tutor/i })).toHaveAttribute(
       'href',

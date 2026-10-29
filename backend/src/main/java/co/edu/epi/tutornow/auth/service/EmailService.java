@@ -37,4 +37,10 @@ public class EmailService {
         log.info("[EMAIL SIMULADO] Para: {} | Asunto: Confirma tu cambio de contrasena tutorNow (expira en 15 minutos) | Enlace de confirmacion: {}",
                 usuario.getCorreoElectronico(), link);
     }
+
+    public void sendNewMessageNotification(Usuario destinatario, String remitenteNombre, String contenido, Long asesoriaId) {
+        String link = String.format("http://localhost:3000/tutoring/chats?chat=%d", asesoriaId);
+        log.info("[EMAIL SIMULADO] Para: {} | Asunto: Nuevo mensaje en tutorNow de {} | Vista previa: {} | Enlace: {}",
+                destinatario.getCorreoElectronico(), remitenteNombre, contenido.length() > 50 ? contenido.substring(0, 50) + "..." : contenido, link);
+    }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { format, isSameDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, ChevronLeft } from 'lucide-react';
 import { fetchChatMessages, sendMessage, markAsRead } from '../api/chatApi';
 import { useChatStream } from '../hooks/useChatStream';
 import { useChatUnreadStore } from '../stores/useChatUnreadStore';
@@ -13,6 +13,8 @@ import type { Mensaje, MensajesPage, ChatResumen } from '../types';
 interface ChatThreadProps {
   asesoriaId: number;
   initialThread?: ChatResumen;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 // Mensaje optimista para UI inmediata
@@ -32,7 +34,7 @@ function formatFechaGroup(iso: string): string {
   return format(fecha, "EEEE d 'de' MMMM", { locale: es });
 }
 
-export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
+export function ChatThread({ asesoriaId, initialThread, showBackButton, onBack }: ChatThreadProps) {
   const currentUser = useAuthStore((state) => state.user);
   const [messages, setMessages] = useState<OptimisticMensaje[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,6 +198,25 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
 
   return (
     <div className="flex h-full flex-col">
+      {showBackButton && onBack && (
+        <header className="flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface px-4">
+          <button
+            onClick={onBack}
+            className="p-2 rounded-lg text-text-muted hover:text-brand-poli hover:bg-brand-poli/10 transition-colors"
+            aria-label="Volver a la lista de chats"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="truncate font-semibold text-text-main">
+              {initialThread?.contraparte.fullName}
+            </h1>
+            <p className="truncate text-sm text-text-muted">
+              {initialThread?.materia} — {initialThread?.tema}
+            </p>
+          </div>
+        </header>
+      )}
       <div
         ref={listRef}
         onScroll={handleScroll}
