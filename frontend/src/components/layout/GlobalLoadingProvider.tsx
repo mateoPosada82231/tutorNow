@@ -6,7 +6,7 @@ import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { useGlobalLoading } from '@/hooks/useGlobalLoading';
 import { finishNavigation, startNavigation } from '@/lib/globalLoading';
 
-const SHOW_DELAY_MS = 150;
+const SHOW_DELAY_MS = 1000;
 const MIN_VISIBLE_MS = 350;
 const NAVIGATION_TIMEOUT_MS = 10000;
 
