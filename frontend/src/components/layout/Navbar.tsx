@@ -69,12 +69,20 @@ export function Navbar() {
 
   const navLinkClass = (href: string) => {
     const active =
-      href === "/tutoring/requests"
-        ? pathname.startsWith("/tutoring/requests")
-        : href === "/tutoring"
-          ? pathname.startsWith("/tutoring") &&
-            !pathname.startsWith("/tutoring/requests")
-          : pathname === href;
+      href === "/tutoring/requests/new"
+        ? pathname.startsWith("/tutoring/requests/new")
+        : href === "/tutoring/requests"
+          ? pathname.startsWith("/tutoring/requests") && !pathname.startsWith("/tutoring/requests/new")
+          : href === "/tutoring/explore"
+            ? pathname.startsWith("/tutoring/explore")
+            : href === "/tutoring/chats"
+              ? pathname.startsWith("/tutoring/chats")
+              : href === "/tutoring"
+                ? pathname.startsWith("/tutoring") &&
+                  !pathname.startsWith("/tutoring/requests") &&
+                  !pathname.startsWith("/tutoring/chats") &&
+                  !pathname.startsWith("/tutoring/explore")
+                : pathname === href;
     return `hidden items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 sm:inline-flex ${
       active
         ? "bg-brand-poli/10 text-brand-poli"
@@ -108,10 +116,20 @@ export function Navbar() {
             <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
             Panel
           </Link>
+          <Link href="/tutoring/requests/new" className={navLinkClass("/tutoring/requests/new")}>
+            <MessageSquare className="h-4 w-4" aria-hidden="true" />
+            Publicar asesoría
+          </Link>
           <Link href="/tutoring/requests" className={navLinkClass("/tutoring/requests")}>
             <MessageSquare className="h-4 w-4" aria-hidden="true" />
-            Asesorías
+            Mis asesorías
           </Link>
+          {isTutor && (
+            <Link href="/tutoring/explore" className={navLinkClass("/tutoring/explore")}>
+              <BookOpenCheck className="h-4 w-4" aria-hidden="true" />
+              Explorar asesorías
+            </Link>
+          )}
           <Link href="/tutoring/chats" className={navLinkClass("/tutoring/chats")}>
             <MessageSquare className="h-4 w-4" aria-hidden="true" />
             Chats
@@ -188,6 +206,32 @@ export function Navbar() {
                   Mi perfil
                 </Link>
                 <Link
+                  href="/tutoring/requests/new"
+                  role="menuitem"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
+                >
+                  <MessageSquare className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                  Publicar asesoría
+                </Link>
+                <Link
+                  href="/tutoring/requests"
+                  role="menuitem"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
+                >
+                  <MessageSquare className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                  Mis asesorías
+                </Link>
+                {isTutor && (
+                  <Link
+                    href="/tutoring/explore"
+                    role="menuitem"
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
+                  >
+                    <BookOpenCheck className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                    Explorar asesorías
+                  </Link>
+                )}
+                <Link
                   href="/tutoring/chats"
                   role="menuitem"
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
@@ -200,24 +244,13 @@ export function Navbar() {
                     </span>
                   )}
                 </Link>
-                <Link
-                  href="/tutoring/requests"
-                  role="menuitem"
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
-                >
-                  <MessageSquare className="h-4 w-4 text-text-muted" aria-hidden="true" />
-                  Asesorías
-                </Link>
                 {isTutor && (
                   <Link
                     href="/tutoring"
                     role="menuitem"
                     className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
                   >
-                    <BookOpenCheck
-                      className="h-4 w-4 text-text-muted"
-                      aria-hidden="true"
-                    />
+                    <BookOpenCheck className="h-4 w-4 text-text-muted" aria-hidden="true" />
                     Panel de tutor
                   </Link>
                 )}

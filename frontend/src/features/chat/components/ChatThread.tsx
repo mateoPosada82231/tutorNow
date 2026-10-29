@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { format } from 'date-fns';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { format, isSameDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Send, Loader2 } from 'lucide-react';
 import { fetchChatMessages, sendMessage, markAsRead } from '../api/chatApi';
 import { useChatStream } from '../hooks/useChatStream';
 import { useChatUnreadStore } from '../stores/useChatUnreadStore';
+import { useAuthStore } from '@/stores/useAuthStore';
 import type { Mensaje, MensajesPage, ChatResumen } from '../types';
 
 interface ChatThreadProps {
@@ -14,8 +15,26 @@ interface ChatThreadProps {
   initialThread?: ChatResumen;
 }
 
+// Mensaje optimista para UI inmediata
+interface OptimisticMensaje extends Omit<Mensaje, 'clientMessageId'> {
+  optimistic?: boolean;
+  clientMessageId?: string;
+}
+
+function formatFechaGroup(iso: string): string {
+  const fecha = parseISO(iso);
+  const hoy = new Date();
+  const ayer = new Date(hoy);
+  ayer.setDate(hoy.getDate() - 1);
+
+  if (isSameDay(fecha, hoy)) return 'Hoy';
+  if (isSameDay(fecha, ayer)) return 'Ayer';
+  return format(fecha, "EEEE d 'de' MMMM", { locale: es });
+}
+
 export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
-  const [messages, setMessages] = useState<Mensaje[]>([]);
+  const currentUser = useAuthStore((state) => state.user);
+  const [messages, setMessages] = useState<OptimisticMensaje[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sending, setSending] = useState(false);
@@ -41,10 +60,11 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
       if (append) setLoadingMore(true);
       else setLoading(true);
       const data: MensajesPage = await fetchChatMessages(asesoriaId, before);
+      const serverMessages = data.data.map((m) => ({ ...m, optimistic: false }));
       if (append) {
-        setMessages((prev) => [...data.data, ...prev]);
+        setMessages((prev) => [...serverMessages, ...prev]);
       } else {
-        setMessages(data.data);
+        setMessages(serverMessages);
       }
       setHasMore(data.pagination.hasMore);
       setNextBefore(data.pagination.nextBefore);
@@ -72,21 +92,53 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
     if (!contenido || sending) return;
 
     const clientMessageId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    const now = new Date().toISOString();
+
+    // Optimistic message - aparece INMEDIATAMENTE
+    const optimisticMsg: OptimisticMensaje = {
+      id: Date.now(), // temporal, se reemplazará por el real
+      asesoriaId,
+      emisor: { id: currentUser?.id ?? 0, fullName: 'Tú' },
+      contenido,
+      createdAt: now,
+      clientMessageId,
+      optimistic: true,
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setNewMessage('');
     setSending(true);
+
     try {
       await sendMessage(asesoriaId, { contenido, clientMessageId });
-      setNewMessage('');
+      setSending(false);
     } catch {
       setError('No se pudo enviar el mensaje');
-    } finally {
+      // Quitar el optimista si falla
+      setMessages((prev) => prev.filter((m) => m.clientMessageId !== clientMessageId));
       setSending(false);
     }
   };
 
+  const isOptimistic = (m: OptimisticMensaje): m is OptimisticMensaje & { clientMessageId: string } => m.optimistic === true;
+
+  const getClientMessageId = (m: OptimisticMensaje): string | undefined => {
+    if (isOptimistic(m)) return m.clientMessageId;
+    return undefined;
+  };
+
   const handleMessageReceived = useCallback((mensaje: Mensaje) => {
     setMessages((prev) => {
-      if (prev.some((m) => m.id === mensaje.id)) return prev;
-      return [...prev, mensaje];
+      if (prev.some((m) => m.id === mensaje.id && !m.optimistic)) return prev;
+      const filtered: OptimisticMensaje[] = [];
+      for (const m of prev) {
+        if (!m.optimistic) {
+          filtered.push(m);
+        } else if (getClientMessageId(m) !== mensaje.clientMessageId) {
+          filtered.push(m);
+        }
+      }
+      return [...filtered, { ...mensaje, optimistic: false }];
     });
     if (initialThread) {
       setCount(asesoriaId, (initialThread.noLeidos ?? 0) + 1);
@@ -117,6 +169,23 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
     return () => clearTimeout(timer);
   }, [messages, markRead]);
 
+  // Agrupar mensajes por fecha para separadores tipo WhatsApp
+  const groupedMessages = useMemo(() => {
+    const groups: Record<string, OptimisticMensaje[]> = {};
+    for (const msg of messages) {
+      const key = formatFechaGroup(msg.createdAt);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(msg);
+    }
+    return groups;
+  }, [messages]);
+
+  const sortedDates = useMemo(() => Object.keys(groupedMessages).sort((a, b) => {
+    const dateA = parseISO(groupedMessages[a][0].createdAt);
+    const dateB = parseISO(groupedMessages[b][0].createdAt);
+    return dateA.getTime() - dateB.getTime();
+  }), [groupedMessages]);
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -130,7 +199,7 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
       <div
         ref={listRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4 space-y-6"
       >
         {hasMore && (
           <div className="flex justify-center pt-2">
@@ -148,26 +217,42 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
           </div>
         )}
 
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex gap-2 ${msg.emisor.id === initialThread?.contraparte.id ? '' : 'flex-row-reverse'}`}
-          >
-            <div
-              className={`flex max-w-[75%] flex-col ${msg.emisor.id === initialThread?.contraparte.id ? '' : 'items-end'}`}
-            >
-              <div
-                className={`rounded-3xl px-4 py-2.5 shadow-sm ${
-                  msg.emisor.id === initialThread?.contraparte.id
-                    ? 'bg-brand-poli/15 text-text-main rounded-bl-xl border border-brand-poli/20'
-                    : 'bg-brand-poli text-white rounded-br-xl'
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{msg.contenido}</p>
-              </div>
-              <p className={`mt-1 text-xs text-text-muted ${msg.emisor.id === initialThread?.contraparte.id ? 'ml-1' : 'mr-1'}`}>
-                {format(new Date(msg.createdAt), 'HH:mm', { locale: es })}
-              </p>
+        {sortedDates.map((dateKey) => (
+          <div key={dateKey} className="flex flex-col gap-3">
+            {/* Separador de fecha */}
+            <div className="flex items-center gap-3 w-full">
+              <div className="flex-1 border-t border-border-color" />
+              <span className="px-3 text-xs font-medium text-text-muted bg-bg-surface">
+                {dateKey}
+              </span>
+              <div className="flex-1 border-t border-border-color" />
+            </div>
+
+            {/* Mensajes del día */}
+            <div className="flex flex-col gap-3">
+              {groupedMessages[dateKey].map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-2 ${msg.emisor.id === initialThread?.contraparte.id ? '' : 'flex-row-reverse'} ${msg.optimistic ? 'opacity-70' : ''}`}
+                >
+                  <div
+                    className={`flex max-w-[75%] flex-col ${msg.emisor.id === initialThread?.contraparte.id ? '' : 'items-end'}`}
+                  >
+                    <div
+                      className={`rounded-3xl px-4 py-2.5 shadow-sm ${
+                        msg.emisor.id === initialThread?.contraparte.id
+                          ? 'bg-brand-poli/15 text-text-main rounded-bl-xl border border-brand-poli/20'
+                          : 'bg-brand-poli text-white rounded-br-xl'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{msg.contenido}</p>
+                    </div>
+                    <p className={`mt-1 text-xs text-text-muted ${msg.emisor.id === initialThread?.contraparte.id ? 'ml-1' : 'mr-1'}`}>
+                      {format(parseISO(msg.createdAt), 'HH:mm', { locale: es })}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}

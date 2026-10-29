@@ -9,6 +9,7 @@ export interface Mensaje {
   emisor: EmisorBrief;
   contenido: string;
   createdAt: string;
+  clientMessageId?: string;
 }
 
 export interface MensajesPage {
