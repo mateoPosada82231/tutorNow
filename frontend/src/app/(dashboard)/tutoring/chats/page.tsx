@@ -19,7 +19,6 @@ export default function ChatsSplitView() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(initialChatId);
   const [error, setError] = useState<string | null>(null);
-  const [mobileThreadListOpen, setMobileThreadListOpen] = useState(false);
 
   // Load thread list once
   useEffect(() => {
@@ -45,8 +44,6 @@ export default function ChatsSplitView() {
       const params = new URLSearchParams(searchParams.toString());
       params.set('chat', String(selectedId));
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-      // Close mobile thread list when selecting a chat
-      setMobileThreadListOpen(false);
     } else {
       const params = new URLSearchParams(searchParams.toString());
       params.delete('chat');
@@ -56,11 +53,9 @@ export default function ChatsSplitView() {
 
   const handleSelect = (id: number) => {
     setSelectedId(id);
-    // On mobile, close the thread list drawer after selection
-    setMobileThreadListOpen(false);
   };
 
-  const handleClose = () => {
+  const handleBack = () => {
     setSelectedId(null);
   };
 
@@ -80,17 +75,62 @@ export default function ChatsSplitView() {
     );
   }
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  // Detect mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
+  // ============================================================
+  // MOBILE: WhatsApp-style navigation
+  // ============================================================
+  if (isMobile) {
+    // Mobile: Show either thread list OR chat thread (mutually exclusive)
+    if (selectedId === null) {
+      // --- THREAD LIST (full screen) ---
+      return (
+        <div className="flex h-[calc(100vh-4rem)] flex-col bg-bg-primary">
+          <header className="flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface px-4">
+            <h1 className="text-lg font-semibold text-text-main">Chats</h1>
+          </header>
+          <div className="flex-1 overflow-y-auto">
+            <ChatThreadList
+              threads={threads}
+              selectedId={null}
+              onSelect={handleSelect}
+            />
+          </div>
+        </div>
+      );
+    } else {
+      // --- CHAT THREAD (full screen with back button) ---
+      const thread = threads.find(t => t.asesoriaId === selectedId);
+      return (
+        <ChatThread
+          asesoriaId={selectedId}
+          initialThread={thread}
+          showBackButton={true}
+          onBack={handleBack}
+        />
+      );
+    }
+  }
+
+  // ============================================================
+  // DESKTOP: Split view (sidebar + thread)
+  // ============================================================
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-bg-primary overflow-hidden">
-      {/* Sidebar - Lista de chats (Desktop) */}
+      {/* Sidebar - Lista de chats */}
       <aside className="w-full md:w-96 lg:w-80 flex flex-col border-r border-border-color bg-bg-surface hidden md:flex">
         <div className="flex h-16 items-center gap-3 border-b border-border-color px-4">
           <h1 className="text-lg font-semibold text-text-main">Chats</h1>
           {selectedId !== null && (
             <button
-              onClick={handleClose}
+              onClick={handleBack}
               className="ml-auto p-1 rounded hover:bg-brand-poli/10 text-text-muted transition-colors"
               aria-label="Cerrar chat"
             >
@@ -107,49 +147,12 @@ export default function ChatsSplitView() {
         </div>
       </aside>
 
-      {/* Mobile: Thread List Drawer */}
-      {isMobile && mobileThreadListOpen && (
-        <div
-          className="fixed inset-0 z-50 flex"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Lista de chats"
-        >
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setMobileThreadListOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="relative z-10 flex flex-col w-full max-w-sm bg-bg-surface border-r border-border-color">
-            <div className="flex h-16 items-center justify-between border-b border-border-color px-4">
-              <h1 className="text-lg font-semibold text-text-main">Chats</h1>
-              <button
-                onClick={() => setMobileThreadListOpen(false)}
-                className="p-2 text-text-muted hover:text-brand-poli"
-                aria-label="Cerrar"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <ChatThreadList
-                threads={threads}
-                selectedId={selectedId}
-                onSelect={handleSelect}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Área del chat activo */}
       <main className="flex-1 flex flex-col min-w-0">
         {selectedId !== null ? (
           <ChatThread
             asesoriaId={selectedId}
             initialThread={threads.find(t => t.asesoriaId === selectedId)}
-            showBackButton={isMobile}
-            onBack={() => setMobileThreadListOpen(true)}
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-bg-primary px-6 text-center">
@@ -161,17 +164,6 @@ export default function ChatsSplitView() {
               <p className="mt-2 text-text-muted">Elige una conversación en la lista para empezar a chatear</p>
             </div>
           </div>
-        )}
-
-        {/* Mobile: Floating action button to open thread list when chat is open */}
-        {isMobile && selectedId !== null && (
-          <button
-            onClick={() => setMobileThreadListOpen(true)}
-            className="fixed bottom-6 right-4 z-40 md:hidden flex h-12 w-12 items-center justify-center rounded-full bg-brand-poli shadow-lg text-white transition-transform duration-200 hover:scale-105"
-            aria-label="Abrir lista de chats"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
         )}
       </main>
     </div>
