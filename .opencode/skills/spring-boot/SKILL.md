@@ -137,7 +137,8 @@ Implementado en `chat/` + `tutorial/port/`. Migracion `V10__create_chat_tables.s
 - No hay mensajeria libre usuario↔tutor ni boton "contactar tutor": el chat nace cuando nace la asesoria.
 
 ### Frontera entre modulos
-- `chat/` no toca `tutorial.model` ni `tutorial.repository`. Lee la asesoria por `tutorial/port/AsesoriaChatPort` (`requireParticipante`, `listarPorUsuario`), implementado en `tutorial/service/AsesoriaChatAdapter`.
+- `chat/` **no consulta** `tutorial.repository` ni lee la asesoria por su cuenta: resuelve participacion y datos del hilo por `tutorial/port/AsesoriaChatPort` (`requireParticipante`, `listarPorUsuario`), implementado en `tutorial/service/AsesoriaChatAdapter`.
+- `chat/` si referencia `Asesoria` como destino de FK (`mensajes.asesoria_id`, construido con `Asesoria.builder().id(...)`) y usa el enum `EstadoAsesoria` para el gating. Eso es acoplamiento de dominio, no una segunda via de lectura.
 - Consecuencia practica: el tutor participa por `asesoria.tutor.usuario.id`, **no** por `tutor.id`.
 
 ### Persistencia

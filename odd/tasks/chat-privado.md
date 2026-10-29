@@ -19,7 +19,7 @@ Branch: `feature/chat-privado`. Delivery: `ask-on-risk`. Test runner: `mvn test`
 - **S7** — History is paginated by `id` (keyset), newest first in the query, oldest first in the response. `size` default 30, clamped to 1..50.
 - **S8** — New messages are pushed over SSE to both participants after the transaction commits.
 - **S9** — Unread count per thread = messages with `id > ultimo_leido_id` and `emisor_id != usuarioId`. Marking read never moves the cursor backwards.
-- **S10** — Message content is trimmed, must not be blank, and is limited to 2000 characters. Rendered as plain text on the client.
+- **S10** — Message content is trimmed first, then must be non-blank, then limited to 2000 characters (so padding does not consume the limit). Rendered as plain text on the client.
 - **S11** — `contenido` is the only free-text field; there are no attachments in this iteration (assumption).
 
 ## Tasks
@@ -59,3 +59,13 @@ Branch: `feature/chat-privado`. Delivery: `ask-on-risk`. Test runner: `mvn test`
 
 ### L6 — open decisions
 - Whether the thread list should also surface `EVALUADA` threads or hide them. Assumption for now: show every Asesoria the user participates in, ordered by last activity.
+
+### L7 — independent verification round 1 (2026-10-28)
+Verifier ran a scratch-copy probe suite (`@SpringBootTest` + MockMvc + H2 + spying `ChatStreamService`). S1-S11 PASS, migration mapping statically PASS, `ddl-auto: validate` on PostgreSQL UNAVAILABLE (no isolated instance authorized).
+
+- **Blocker (fixed):** `ChatStreamService.suscribir` used `computeIfAbsent(...).add(emitter)`, which is not atomic with the `computeIfPresent` cleanup. A reconnect racing a timeout/completion lost the live emitter (82 losses in 200 000 iterations). Fixed by registering inside a single `compute`. Regression test `ChatStreamServiceTest.concurrenciaNoPierdeEmisores` reproduces the loss on the old code and passes on the fix.
+- **Advisory (fixed):** `@Size(max = 2000)` on the raw payload rejected a padded message whose trimmed content was exactly 2000. The limit now applies after trimming in `ChatService`.
+- **Advisory (fixed):** the `spring-boot` skill claimed `chat/` does not touch `tutorial.model`, which contradicted the FK reference to `Asesoria`. Doc corrected.
+- **Advisory (accepted):** two truly simultaneous identical `POST`s would surface a `DataIntegrityViolationException` as 500 instead of replaying the stored message. Data stays correct thanks to the V10 unique constraint; retry serialization is out of scope for this slice.
+- **Advisory (accepted):** `ChatService.listar` issues one last-message query per thread. Bounded by the number of threads a user has.
+- `mvn test` after the correction: 126 tests, 0 failures, 0 errors.

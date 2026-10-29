@@ -19,15 +19,19 @@ public class ChatStreamService {
 
     public SseEmitter suscribir(Long usuarioId) {
         SseEmitter emitter = new SseEmitter(TIMEOUT_MS);
-        emisores.computeIfAbsent(usuarioId, key -> ConcurrentHashMap.newKeySet()).add(emitter);
-        Runnable limpieza = () -> remover(usuarioId, emitter);
+        emisores.compute(usuarioId, (key, actuales) -> {
+            Set<SseEmitter> suscripciones = actuales == null ? ConcurrentHashMap.newKeySet() : actuales;
+            suscripciones.add(emitter);
+            return suscripciones;
+        });
+        Runnable limpieza = () -> quitar(usuarioId, emitter);
         emitter.onCompletion(limpieza);
         emitter.onTimeout(limpieza);
         emitter.onError(error -> limpieza.run());
         try {
             emitter.send(SseEmitter.event().comment("conectado"));
         } catch (IOException ex) {
-            remover(usuarioId, emitter);
+            quitar(usuarioId, emitter);
             emitter.completeWithError(ex);
         }
         return emitter;
@@ -44,13 +48,13 @@ public class ChatStreamService {
                         .name("mensaje")
                         .data(mensaje, MediaType.APPLICATION_JSON));
             } catch (IOException | IllegalStateException ex) {
-                remover(usuarioId, emitter);
+                quitar(usuarioId, emitter);
                 emitter.complete();
             }
         }
     }
 
-    private void remover(Long usuarioId, SseEmitter emitter) {
+    void quitar(Long usuarioId, SseEmitter emitter) {
         emisores.computeIfPresent(usuarioId, (key, suscripciones) -> {
             suscripciones.remove(emitter);
             return suscripciones.isEmpty() ? null : suscripciones;

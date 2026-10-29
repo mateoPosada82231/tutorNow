@@ -43,6 +43,7 @@ public class ChatService {
 
     private static final int DEFAULT_PAGE_SIZE = 30;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final int CONTENIDO_MAXIMO = 2000;
 
     private final MensajeRepository mensajeRepository;
     private final ChatLecturaRepository chatLecturaRepository;
@@ -119,6 +120,9 @@ public class ChatService {
         String contenido = request.getContenido() == null ? "" : request.getContenido().trim();
         if (contenido.isEmpty()) {
             throw new IllegalArgumentException("El mensaje no puede estar vacio");
+        }
+        if (contenido.length() > CONTENIDO_MAXIMO) {
+            throw new IllegalArgumentException("El mensaje no puede superar los 2000 caracteres");
         }
 
         return mensajeRepository

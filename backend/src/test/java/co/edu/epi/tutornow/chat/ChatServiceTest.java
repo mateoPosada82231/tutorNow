@@ -206,6 +206,40 @@ class ChatServiceTest {
                     .isInstanceOf(IllegalArgumentException.class);
             verify(mensajeRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("El limite de 2000 se aplica despues de recortar")
+        void limiteDespuesDeRecortar() {
+            stubUsuario(estudiante);
+            when(asesoriaChatPort.requireParticipante(20L, 1L)).thenReturn(pendiente);
+            when(mensajeRepository.findByAsesoriaIdAndClientMessageId(20L, "c-1"))
+                    .thenReturn(Optional.empty());
+            when(mensajeRepository.save(any(Mensaje.class))).thenAnswer(invocation -> {
+                Mensaje guardado = invocation.getArgument(0);
+                guardado.setId(100L);
+                return guardado;
+            });
+
+            MensajeResponse response = chatService.enviar(
+                    estudiante.getCorreoElectronico(), 20L,
+                    new EnviarMensajeRequest("  " + "x".repeat(2000) + "  ", "c-1"));
+
+            assertThat(response.getContenido()).hasSize(2000);
+        }
+
+        @Test
+        @DisplayName("Un contenido que supera 2000 tras recortar no se guarda")
+        void contenidoDemasiadoLargo() {
+            stubUsuario(estudiante);
+            when(asesoriaChatPort.requireParticipante(20L, 1L)).thenReturn(pendiente);
+
+            assertThatThrownBy(() -> chatService.enviar(
+                    estudiante.getCorreoElectronico(), 20L,
+                    new EnviarMensajeRequest("x".repeat(2001), "c-1")))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("2000");
+            verify(mensajeRepository, never()).save(any());
+        }
     }
 
     @Nested

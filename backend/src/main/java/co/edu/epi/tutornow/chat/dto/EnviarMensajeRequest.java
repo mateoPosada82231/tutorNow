@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class EnviarMensajeRequest {
 
     @NotBlank(message = "El mensaje no puede estar vacio")
-    @Size(max = 2000, message = "El mensaje no puede superar los 2000 caracteres")
     private String contenido;
 
     @NotBlank(message = "El identificador del mensaje es obligatorio")
