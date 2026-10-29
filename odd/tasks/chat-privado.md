@@ -60,10 +60,14 @@ Branch: `feature/chat-privado`. Delivery: `ask-on-risk`. Test runner: `mvn test`
 ### L6 — open decisions
 - Whether the thread list should also surface `EVALUADA` threads or hide them. Assumption for now: show every Asesoria the user participates in, ordered by last activity.
 
-### L9 — UI polish (2026-10-29)
-- Chat bubbles: `rounded-3xl`, incoming gets subtle `border-brand-poli/20` + shadow, outgoing solid brand color
-- Composer input: matches project `Input` component (bg-bg-surface, border-border-color, min-h-[44px], focus:ring-brand-poli)
-- Send button: matches project `Button` primary variant (min-h-[44px], rounded-lg, hover:bg-brand-poli-hover)
-- AsesoriaActions: "Ir al chat" (PENDIENTE) + "Ver chat" (FINALIZADA/EVALUADA) links with ghost-like style
-- All tests: 126 backend + 147 frontend = 273 passing
-- Build: compilación exitosa
+### L10 — UX polish v2 (2026-10-29)
+- **Optimistic UI**: mensaje propio aparece INMEDIATAMENTE al hacer send (sombra + opacidad 70%), se reemplaza por el real cuando llega vía SSE (match por `clientMessageId`)
+- **Separadores de fecha** tipo WhatsApp: agrupa mensajes por día (Hoy / Ayer / Lunes 28 octubre)
+- **Navbar redesign** por rol:
+  - Tutor: Panel · Publicar asesoría · Mis asesorías · Explorar asesorías · Chats · Panel de tutor
+  - Estudiante: Panel · Publicar asesoría · Mis asesorías · Chats
+- **Página /tutoring/explore** (solo tutors): filtros por texto, materia, modalidad; reutiliza `RequestCard`
+- **Badge no leídos** ya funcionaba en navbar y dropdown
+- `Mensaje` type incluye `clientMessageId?: string` para matching optimista↔real
+- Tests: 147 frontend + 126 backend = 273 passing
+- Build: OK
