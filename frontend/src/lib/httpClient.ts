@@ -1,4 +1,5 @@
 import { config } from './config';
+import { beginRequest } from './globalLoading';
 import { endSession, redirectToLogin } from './session';
 import { useAuthStore } from '@/stores/useAuthStore';
 
@@ -25,6 +26,15 @@ interface RequestOptions {
   auth?: boolean;
 }
 
+async function withGlobalLoading<T>(action: () => Promise<T>): Promise<T> {
+  const release = beginRequest();
+  try {
+    return await action();
+  } finally {
+    release();
+  }
+}
+
 async function parseError(response: Response, options: RequestOptions): Promise<never> {
   let data: ApiError | null = null;
   try {
@@ -44,41 +54,49 @@ async function parseError(response: Response, options: RequestOptions): Promise<
 
 export const httpClient = {
   async get<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const response = await fetch(`${config.apiUrl}${path}`, {
-      headers: buildHeaders(options.auth),
+    return withGlobalLoading(async () => {
+      const response = await fetch(`${config.apiUrl}${path}`, {
+        headers: buildHeaders(options.auth),
+      });
+      if (!response.ok) await parseError(response, options);
+      return response.json() as Promise<T>;
     });
-    if (!response.ok) await parseError(response, options);
-    return response.json() as Promise<T>;
   },
 
   async post<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
-    const response = await fetch(`${config.apiUrl}${path}`, {
-      method: 'POST',
-      headers: buildHeaders(options.auth),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+    return withGlobalLoading(async () => {
+      const response = await fetch(`${config.apiUrl}${path}`, {
+        method: 'POST',
+        headers: buildHeaders(options.auth),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) await parseError(response, options);
+      return response.json() as Promise<T>;
     });
-    if (!response.ok) await parseError(response, options);
-    return response.json() as Promise<T>;
   },
 
   async put<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
-    const response = await fetch(`${config.apiUrl}${path}`, {
-      method: 'PUT',
-      headers: buildHeaders(options.auth),
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+    return withGlobalLoading(async () => {
+      const response = await fetch(`${config.apiUrl}${path}`, {
+        method: 'PUT',
+        headers: buildHeaders(options.auth),
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      if (!response.ok) await parseError(response, options);
+      return response.json() as Promise<T>;
     });
-    if (!response.ok) await parseError(response, options);
-    return response.json() as Promise<T>;
   },
 
   async delete<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const response = await fetch(`${config.apiUrl}${path}`, {
-      method: 'DELETE',
-      headers: buildHeaders(options.auth),
+    return withGlobalLoading(async () => {
+      const response = await fetch(`${config.apiUrl}${path}`, {
+        method: 'DELETE',
+        headers: buildHeaders(options.auth),
+      });
+      if (!response.ok) await parseError(response, options);
+      if (response.status === 204) return undefined as T;
+      return response.json() as Promise<T>;
     });
-    if (!response.ok) await parseError(response, options);
-    if (response.status === 204) return undefined as T;
-    return response.json() as Promise<T>;
   },
 };
 
