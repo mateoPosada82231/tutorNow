@@ -155,7 +155,7 @@ export function AsesoriaActions({ request, onUpdated }: AsesoriaActionsProps) {
           type="button"
           disabled={pendingAction !== null}
           onClick={() => void handleCancel()}
-          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-error px-4 py-2 text-sm font-semibold text-error transition-colors duration-200 hover:bg-error/10 focus:outline-none focus:ring-2 focus:ring-error disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-error px-4 py-2 text-sm font-semibold text-error transition-all duration-200 hover:bg-error/10 enabled:hover:-translate-y-0.5 enabled:hover:shadow-md active:translate-y-0 active:shadow-none focus:outline-none focus:ring-2 focus:ring-error disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none"
         >
           {pendingAction === 'cancel' ? (
             <Spinner size="sm" />
