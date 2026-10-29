@@ -157,10 +157,10 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
               className={`flex max-w-[75%] flex-col ${msg.emisor.id === initialThread?.contraparte.id ? '' : 'items-end'}`}
             >
               <div
-                className={`rounded-2xl px-4 py-2 ${
+                className={`rounded-3xl px-4 py-2.5 shadow-sm ${
                   msg.emisor.id === initialThread?.contraparte.id
-                    ? 'bg-brand-poli/10 text-text-main rounded-bl-none'
-                    : 'bg-brand-poli text-white rounded-br-none'
+                    ? 'bg-brand-poli/15 text-text-main rounded-bl-xl border border-brand-poli/20'
+                    : 'bg-brand-poli text-white rounded-br-xl'
                 }`}
               >
                 <p className="whitespace-pre-wrap">{msg.contenido}</p>
@@ -183,14 +183,14 @@ export function ChatThread({ asesoriaId, initialThread }: ChatThreadProps) {
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder="Escribe un mensaje..."
-              className="flex-1 rounded-lg border border-border-color bg-bg-main px-4 py-2 text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-poli"
+              className="flex-1 min-h-[44px] rounded-lg border border-border-color bg-bg-surface px-4 py-2 pr-10 text-base text-text-main placeholder:text-text-muted transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-50"
               maxLength={2000}
               disabled={sending}
             />
             <button
               type="submit"
               disabled={!newMessage.trim() || sending}
-              className="flex h-10 min-w-[44px] items-center justify-center rounded-lg bg-brand-poli px-4 font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand-poli px-4 py-2 font-semibold text-white transition-colors duration-200 hover:bg-brand-poli-hover focus:outline-none focus:ring-2 focus:ring-brand-poli focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {sending ? (
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
