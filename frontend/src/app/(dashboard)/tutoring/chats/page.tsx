@@ -6,7 +6,7 @@ import { ChatThreadList } from '@/features/chat/components/ChatThreadList';
 import { ChatThread } from '@/features/chat/components/ChatThread';
 import { fetchChats } from '@/features/chat/api/chatApi';
 import type { ChatResumen } from '@/features/chat/types';
-import { Loader2, ChevronLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 export default function ChatsSplitView() {
   const searchParams = useSearchParams();
@@ -19,6 +19,15 @@ export default function ChatsSplitView() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(initialChatId);
   const [error, setError] = useState<string | null>(null);
+
+  // Detect mobile - MUST be before any early returns
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Load thread list once
   useEffect(() => {
@@ -59,6 +68,7 @@ export default function ChatsSplitView() {
     setSelectedId(null);
   };
 
+  // Early returns - AFTER all hooks
   if (loading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-bg-primary">
@@ -74,15 +84,6 @@ export default function ChatsSplitView() {
       </div>
     );
   }
-
-  // Detect mobile
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // ============================================================
   // MOBILE: WhatsApp-style navigation
