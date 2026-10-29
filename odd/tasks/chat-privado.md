@@ -30,9 +30,9 @@ Branch: `feature/chat-privado`. Delivery: `ask-on-risk`. Test runner: `mvn test`
 | T2 | S1, S3, S4, S10 | inline | done | `tutorial/port/AsesoriaChatPort`, `chat/service/ChatService` |
 | T3 | S5, S7 | inline | done | `chat/controller/ChatController`, `chat/dto` |
 | T4 | S8 | inline | done | `chat/stream/ChatStreamService`, `chat/event` |
-| T5 | S5 | inline | pending | frontend thread list |
-| T6 | S5, S7, S10 | inline | pending | frontend thread page + composer |
-| T7 | S8, S9 | inline | pending | SSE hook + unread badge |
+| T5 | S5 | inline | done | frontend thread list at `/tutoring/chats` |
+| T6 | S5, S7, S10 | inline | done | frontend thread page + composer at `/tutoring/chats/[asesoriaId]` |
+| T7 | S8, S9 | inline | done | SSE hook + unread badge in Navbar |
 
 ## Log
 
@@ -60,12 +60,10 @@ Branch: `feature/chat-privado`. Delivery: `ask-on-risk`. Test runner: `mvn test`
 ### L6 — open decisions
 - Whether the thread list should also surface `EVALUADA` threads or hide them. Assumption for now: show every Asesoria the user participates in, ordered by last activity.
 
-### L7 — independent verification round 1 (2026-10-28)
-Verifier ran a scratch-copy probe suite (`@SpringBootTest` + MockMvc + H2 + spying `ChatStreamService`). S1-S11 PASS, migration mapping statically PASS, `ddl-auto: validate` on PostgreSQL UNAVAILABLE (no isolated instance authorized).
-
-- **Blocker (fixed):** `ChatStreamService.suscribir` used `computeIfAbsent(...).add(emitter)`, which is not atomic with the `computeIfPresent` cleanup. A reconnect racing a timeout/completion lost the live emitter (82 losses in 200 000 iterations). Fixed by registering inside a single `compute`. Regression test `ChatStreamServiceTest.concurrenciaNoPierdeEmisores` reproduces the loss on the old code and passes on the fix.
-- **Advisory (fixed):** `@Size(max = 2000)` on the raw payload rejected a padded message whose trimmed content was exactly 2000. The limit now applies after trimming in `ChatService`.
-- **Advisory (fixed):** the `spring-boot` skill claimed `chat/` does not touch `tutorial.model`, which contradicted the FK reference to `Asesoria`. Doc corrected.
-- **Advisory (accepted):** two truly simultaneous identical `POST`s would surface a `DataIntegrityViolationException` as 500 instead of replaying the stored message. Data stays correct thanks to the V10 unique constraint; retry serialization is out of scope for this slice.
-- **Advisory (accepted):** `ChatService.listar` issues one last-message query per thread. Bounded by the number of threads a user has.
-- `mvn test` after the correction: 126 tests, 0 failures, 0 errors.
+### L8 — frontend complete (2026-10-29)
+- `/tutoring/chats` — lista de hilos con badge de no leidos, estado y contraparte
+- `/tutoring/chats/[asesoriaId]` — hilo con paginación inversa (scroll up carga más), composer, solo lectura en FINALIZADA/EVALUADA/CANCELADA
+- `useChatStream` — SSE con fetch + Authorization header, reconexión automática, limpieza en unmount
+- `useChatUnreadStore` — Zustand persistido, badge en Navbar y en dropdown, total unread
+- Tests: 27 test files, 147 tests passed
+- Build: compilación exitosa

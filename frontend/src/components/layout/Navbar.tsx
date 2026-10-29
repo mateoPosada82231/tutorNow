@@ -14,6 +14,7 @@ import {
   User,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useChatUnreadStore } from "@/features/chat/stores/useChatUnreadStore";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 function initialsOf(fullName: string | undefined): string {
@@ -33,6 +34,7 @@ export function Navbar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const isTutor = user?.role === "TUTOR";
+  const totalUnread = useChatUnreadStore((state) => state.getTotal());
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -110,6 +112,15 @@ export function Navbar() {
             <MessageSquare className="h-4 w-4" aria-hidden="true" />
             Asesorías
           </Link>
+          <Link href="/tutoring/chats" className={navLinkClass("/tutoring/chats")}>
+            <MessageSquare className="h-4 w-4" aria-hidden="true" />
+            Chats
+            {totalUnread > 0 && (
+              <span className="flex h-5 min-w-[18px] items-center justify-center rounded-full bg-brand-poli px-1.5 text-[10px] font-bold text-white">
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
+            )}
+          </Link>
           {isTutor && (
             <Link href="/tutoring" className={navLinkClass("/tutoring")}>
               <BookOpenCheck className="h-4 w-4" aria-hidden="true" />
@@ -175,6 +186,19 @@ export function Navbar() {
                     aria-hidden="true"
                   />
                   Mi perfil
+                </Link>
+                <Link
+                  href="/tutoring/chats"
+                  role="menuitem"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-text-main transition-colors duration-150 hover:bg-brand-poli/10"
+                >
+                  <MessageSquare className="h-4 w-4 text-text-muted" aria-hidden="true" />
+                  Chats
+                  {totalUnread > 0 && (
+                    <span className="ml-auto flex h-5 min-w-[18px] items-center justify-center rounded-full bg-brand-poli px-1.5 text-[10px] font-bold text-white">
+                      {totalUnread > 99 ? '99+' : totalUnread}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/tutoring/requests"

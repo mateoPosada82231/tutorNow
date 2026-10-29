@@ -80,6 +80,17 @@ export const httpClient = {
     if (response.status === 204) return undefined as T;
     return response.json() as Promise<T>;
   },
+
+  async patch<T>(path: string, body?: unknown, options: RequestOptions = {}): Promise<T> {
+    const response = await fetch(`${config.apiUrl}${path}`, {
+      method: 'PATCH',
+      headers: buildHeaders(options.auth),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+    if (!response.ok) await parseError(response, options);
+    if (response.status === 204) return undefined as T;
+    return response.json() as Promise<T>;
+  },
 };
 
 function buildHeaders(withAuth = false): HeadersInit {
