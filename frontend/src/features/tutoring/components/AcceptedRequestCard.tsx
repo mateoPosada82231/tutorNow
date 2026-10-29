@@ -85,10 +85,13 @@ export function AcceptedRequestCard({ request, onUpdated, detailHref }: Accepted
       <div className="mt-auto flex items-center justify-end pt-2">
         <Link
           href={detailHref ?? `/tutoring/requests/${request.id}?from=agenda`}
-          className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          className="group inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-poli transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-poli/10 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-poli motion-reduce:transform-none motion-reduce:transition-none"
         >
           Ver asesoría
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          <ArrowRight
+            className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none"
+            aria-hidden="true"
+          />
         </Link>
       </div>
     </article>

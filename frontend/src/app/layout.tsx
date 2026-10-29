@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { GlobalLoadingProvider } from "@/components/layout/GlobalLoadingProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -29,7 +30,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-screen bg-bg-primary font-sans text-text-main antialiased">
-        {children}
+        <GlobalLoadingProvider>{children}</GlobalLoadingProvider>
       </body>
     </html>
   );
