@@ -60,10 +60,10 @@ Branch: `feature/chat-privado`. Delivery: `ask-on-risk`. Test runner: `mvn test`
 ### L6 — open decisions
 - Whether the thread list should also surface `EVALUADA` threads or hide them. Assumption for now: show every Asesoria the user participates in, ordered by last activity.
 
-### L8 — frontend complete (2026-10-29)
-- `/tutoring/chats` — lista de hilos con badge de no leidos, estado y contraparte
-- `/tutoring/chats/[asesoriaId]` — hilo con paginación inversa (scroll up carga más), composer, solo lectura en FINALIZADA/EVALUADA/CANCELADA
-- `useChatStream` — SSE con fetch + Authorization header, reconexión automática, limpieza en unmount
-- `useChatUnreadStore` — Zustand persistido, badge en Navbar y en dropdown, total unread
-- Tests: 27 test files, 147 tests passed
+### L9 — UI polish (2026-10-29)
+- Chat bubbles: `rounded-3xl`, incoming gets subtle `border-brand-poli/20` + shadow, outgoing solid brand color
+- Composer input: matches project `Input` component (bg-bg-surface, border-border-color, min-h-[44px], focus:ring-brand-poli)
+- Send button: matches project `Button` primary variant (min-h-[44px], rounded-lg, hover:bg-brand-poli-hover)
+- AsesoriaActions: "Ir al chat" (PENDIENTE) + "Ver chat" (FINALIZADA/EVALUADA) links with ghost-like style
+- All tests: 126 backend + 147 frontend = 273 passing
 - Build: compilación exitosa
