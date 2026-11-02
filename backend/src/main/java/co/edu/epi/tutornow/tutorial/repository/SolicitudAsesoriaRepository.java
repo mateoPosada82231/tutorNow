@@ -23,6 +23,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
               AND (:materiaId IS NULL OR s.materia.id = :materiaId)
               AND (:modalidad IS NULL OR s.modalidad = :modalidad)
               AND (:estado IS NULL OR s.estado = :estado)
+              AND (:q IS NULL OR LOWER(s.tema) LIKE :q OR LOWER(s.materia.nombre) LIKE :q)
               AND (:ocultarNoDisponibles = FALSE OR (
                     s.estudiante.id = :viewerId
                     OR (s.estado <> :estadoCancelada
@@ -39,6 +40,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             @Param("materiaId") Long materiaId,
             @Param("modalidad") Modalidad modalidad,
             @Param("estado") EstadoSolicitud estado,
+            @Param("q") String q,
             Pageable pageable);
 
     @Query("""
@@ -46,6 +48,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             WHERE (:materiaId IS NULL OR s.materia.id = :materiaId)
               AND (:modalidad IS NULL OR s.modalidad = :modalidad)
               AND (:estado IS NULL OR s.estado = :estado)
+              AND (:q IS NULL OR LOWER(s.tema) LIKE :q OR LOWER(s.materia.nombre) LIKE :q)
               AND (:ocultarNoDisponibles = FALSE OR (
                     s.estudiante.id = :viewerId
                     OR (s.estado <> :estadoCancelada
@@ -61,6 +64,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             @Param("materiaId") Long materiaId,
             @Param("modalidad") Modalidad modalidad,
             @Param("estado") EstadoSolicitud estado,
+            @Param("q") String q,
             @Param("materias") List<Long> materias,
             Pageable pageable);
 
