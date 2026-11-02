@@ -53,7 +53,7 @@ export function ChatThreadCard({ thread, isSelected, onClick }: ChatThreadCardPr
             </p>
           </div>
           {thread.noLeidos > 0 && (
-            <span className="flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-brand-poli px-1.5 text-xs font-bold text-white">
+            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-brand-poli px-1.5 text-xs font-bold text-white">
               {thread.noLeidos > 99 ? '99+' : thread.noLeidos}
             </span>
           )}

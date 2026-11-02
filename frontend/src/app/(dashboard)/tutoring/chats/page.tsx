@@ -6,7 +6,7 @@ import { ChatThreadList } from '@/features/chat/components/ChatThreadList';
 import { ChatThread } from '@/features/chat/components/ChatThread';
 import { fetchChats } from '@/features/chat/api/chatApi';
 import type { ChatResumen } from '@/features/chat/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageSquare } from 'lucide-react';
 
 export default function ChatsSplitView() {
   const searchParams = useSearchParams();
@@ -71,7 +71,7 @@ export default function ChatsSplitView() {
   // Early returns - AFTER all hooks
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-bg-primary">
+      <div className="flex h-full items-center justify-center bg-bg-primary">
         <Loader2 className="h-8 w-8 animate-spin text-brand-poli" aria-hidden="true" />
       </div>
     );
@@ -79,7 +79,7 @@ export default function ChatsSplitView() {
 
   if (error) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-bg-primary text-error">
+      <div className="flex h-full items-center justify-center bg-bg-primary text-error">
         {error}
       </div>
     );
@@ -93,11 +93,11 @@ export default function ChatsSplitView() {
     if (selectedId === null) {
       // --- THREAD LIST (full screen) ---
       return (
-        <div className="flex h-[calc(100vh-4rem)] flex-col bg-bg-primary">
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface">
+        <div className="flex h-full flex-col bg-bg-primary">
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border-color bg-bg-surface px-4">
             <h1 className="text-lg font-semibold text-text-main">Chats</h1>
           </header>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-2 py-2">
             <ChatThreadList
               threads={threads}
               selectedId={null}
@@ -124,10 +124,10 @@ export default function ChatsSplitView() {
   // DESKTOP: Split view (sidebar + thread)
   // ============================================================
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-bg-primary overflow-hidden">
+    <div className="flex h-full bg-bg-primary overflow-hidden">
       {/* Sidebar - Lista de chats */}
-      <aside className="w-full md:w-96 lg:w-80 flex flex-col border-r border-border-color bg-bg-surface hidden md:flex">
-        <div className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-border-color bg-bg-surface">
+      <aside className="flex w-80 shrink-0 flex-col border-r border-border-color bg-bg-surface">
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border-color bg-bg-surface px-4">
           <h1 className="text-lg font-semibold text-text-main">Chats</h1>
           {selectedId !== null && (
             <button
@@ -139,7 +139,7 @@ export default function ChatsSplitView() {
             </button>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-2 py-2">
           <ChatThreadList
             threads={threads}
             selectedId={selectedId}
@@ -158,9 +158,7 @@ export default function ChatsSplitView() {
         ) : (
           <div className="flex h-full items-center justify-center bg-bg-primary text-center">
             <div className="max-w-xs">
-              <svg className="mx-auto h-16 w-16 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9 8s9 3.582 9 8z" />
-              </svg>
+              <MessageSquare className="mx-auto h-16 w-16 text-text-muted" aria-hidden="true" />
               <h2 className="mt-4 text-xl font-semibold text-text-main">Selecciona un chat</h2>
               <p className="mt-2 text-text-muted">Elige una conversación en la lista para empezar a chatear</p>
             </div>
