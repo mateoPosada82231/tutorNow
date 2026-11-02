@@ -89,6 +89,11 @@ Decision asked and answered: "Bandeja simulada en la app" — simulated emails c
 
 Clarification answered: "Solo el badge del navbar" — the banner keeps its unread count, only the navbar badge is removed. Delivered in `8d68970`: hamburger/desktop main menu = Publicar asesoría, Mis asesorías, Explorar asesorías (tutor), Chats (no Panel, no Panel del tutor); user menu = Mi perfil, Panel del tutor (tutor), Bandeja de entrada, Cambiar contraseña (+ Cerrar sesión kept); "Bandeja simulada" renamed "Bandeja de entrada" everywhere; banner adds the simulated-email note and a secondary inbox link. RED observed (6 failing) before implementation; full suite 158/158.
 
+### L11 — landing grid mirror, user verbatim (2026-11-02)
+> cuando dije (todas estas en el panel landing estas tambien en el panel) me referia al grill, osea que todos lo que dejaste en el menu hamburguesa sean exactamnete los que salen en el grill de la landing
+
+Delivered in `46d5a8b`: the `/dashboard` quick-access grid mirrors the main menu exactly — Publicar asesoría, Mis asesorías, Explorar asesorías (tutor), Chats. Mi perfil and Seguridad cards dropped (they live in the user menu). RED observed (2 failing, plus one regex-name fix), full suite 158/158.
+
 ### L10 — UX polish v2 (2026-10-29)
 - **Optimistic UI**: mensaje propio aparece INMEDIATAMENTE al hacer send (sombra + opacidad 70%), se reemplaza por el real cuando llega vía SSE (match por `clientMessageId`)
 - **Separadores de fecha** tipo WhatsApp: agrupa mensajes por día (Hoy / Ayer / Lunes 28 octubre)
