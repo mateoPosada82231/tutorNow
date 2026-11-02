@@ -63,3 +63,55 @@ body {
   color: var(--text-main);
   transition: background-color 300ms ease, color 300ms ease;
 }
+
+/* Custom scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--text-muted);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--brand-poli);
+  outline-offset: 2px;
+}
+
+/* Safe area insets for mobile devices with notches */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right);
+}
+
+/* Utility classes for safe areas */
+.safe-top { padding-top: var(--safe-area-inset-top); }
+.safe-bottom { padding-bottom: var(--safe-area-inset-bottom); }
+.safe-left { padding-left: var(--safe-area-inset-left); }
+.safe-right { padding-right: var(--safe-area-inset-right); }
+.safe-x { padding-left: var(--safe-area-inset-left); padding-right: var(--safe-area-inset-right); }
+.safe-y { padding-top: var(--safe-area-inset-top); padding-bottom: var(--safe-area-inset-bottom); }

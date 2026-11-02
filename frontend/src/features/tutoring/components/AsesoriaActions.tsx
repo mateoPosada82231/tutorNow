@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Clock3, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { CheckCircle2, Clock3, Trash2, MessageSquare } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import { HttpError } from '@/lib/httpClient';
 import { cancelTutoringRequest, finishAsesoria } from '../api/tutoringApi';
@@ -45,12 +46,21 @@ export function AsesoriaActions({ request, onUpdated }: AsesoriaActionsProps) {
   if (asesoria.estado === 'FINALIZADA' || asesoria.estado === 'EVALUADA') {
     const fecha = formatFecha(asesoria.finalizadaAt);
     return (
-      <p className="flex items-center gap-2 rounded-lg border border-border-color bg-bg-primary p-3 text-sm text-text-muted">
-        <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
-        {asesoria.estado === 'EVALUADA'
-          ? 'Asesoría finalizada y evaluada.'
-          : `Asesoría finalizada${fecha ? ` el ${fecha}` : ''}.`}
-      </p>
+      <div className="flex flex-col gap-3">
+        <p className="flex items-center gap-2 rounded-lg border border-border-color bg-bg-primary p-3 text-sm text-text-muted">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-success" aria-hidden="true" />
+          {asesoria.estado === 'EVALUADA'
+            ? 'Asesoría finalizada y evaluada.'
+            : `Asesoría finalizada${fecha ? ` el ${fecha}` : ''}.`}
+        </p>
+        <Link
+          href={`/tutoring/chats/${asesoria.id}`}
+          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand-poli/10 px-4 py-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/20 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+        >
+          <MessageSquare className="h-4 w-4" aria-hidden="true" />
+          Ver chat
+        </Link>
+      </div>
     );
   }
 
@@ -138,6 +148,13 @@ export function AsesoriaActions({ request, onUpdated }: AsesoriaActionsProps) {
       ) : null}
 
       <div className="flex flex-col gap-2 sm:flex-row">
+        <Link
+          href={`/tutoring/chats/${asesoria.id}`}
+          className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg bg-brand-poli/10 px-4 py-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/20 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+        >
+          <MessageSquare className="h-4 w-4" aria-hidden="true" />
+          Ir al chat
+        </Link>
         <button
           type="button"
           disabled={miConfirmacion || pendingAction !== null}

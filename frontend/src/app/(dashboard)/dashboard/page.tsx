@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, CalendarClock, KeyRound, User, type LucideIcon } from 'lucide-react';
+import { BookOpen, CalendarClock, MessageSquare, MessageSquarePlus, BookOpenCheck, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useChatUnreadStore } from '@/features/chat/stores/useChatUnreadStore';
 
 interface ActionCardProps {
   href?: string;
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
   const firstName = user?.fullName?.split(' ')[0] ?? 'estudiante';
   const isTutor = user?.role === 'TUTOR';
+  const totalUnread = useChatUnreadStore((state) => state.getTotal());
 
   return (
     <div className="flex flex-col gap-8">
@@ -76,40 +78,71 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {totalUnread > 0 && (
+        <section
+          aria-label="Mensajes sin leer"
+          className="flex flex-col gap-4 rounded-2xl border border-brand-poli/30 bg-brand-poli/10 p-6 shadow-sm transition-all duration-200 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-poli text-white shadow-md">
+              <MessageSquare className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-text-main">
+                {totalUnread === 1
+                  ? 'Tienes 1 mensaje sin leer'
+                  : `Tienes ${totalUnread} mensajes sin leer`}
+              </h2>
+              <p className="text-sm text-text-muted">
+                Cada mensaje nuevo genera un correo simulado en tu bandeja de entrada.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/tutoring/chats"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-poli px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-poli-hover hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-poli sm:ml-auto"
+          >
+            Ver mensajes
+          </Link>
+          <Link
+            href="/dev/inbox"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-brand-poli/30 px-4 py-2.5 text-sm font-medium text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          >
+            Bandeja de entrada
+          </Link>
+        </section>
+      )}
+
       <section aria-label="Accesos rapidos" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ActionCard
-          href="/profile"
-          icon={User}
-          title="Mi perfil"
+          href="/tutoring/requests/new"
+          icon={MessageSquarePlus}
+          title="Publicar asesoría"
+          description="Publica lo que necesitas aprender y recibe propuestas de tutores."
+        />
+        <ActionCard
+          href="/tutoring/requests"
+          icon={CalendarClock}
+          title="Mis asesorías"
           description={
             isTutor
-              ? 'Actualiza tu informacion academica y tu perfil de tutor.'
-              : 'Actualiza tu informacion academica o conviertete en tutor.'
+              ? 'Revisa las solicitudes de los estudiantes y tus asesorias aceptadas.'
+              : 'Revisa el estado de tus solicitudes y asesorias aceptadas.'
           }
         />
         {isTutor && (
           <ActionCard
-            href="/tutoring"
-            icon={BookOpen}
-            title="Panel de tutor"
-            description="Gestiona tus asesorias, solicitudes recibidas y disponibilidad."
+            href="/tutoring/explore"
+            icon={BookOpenCheck}
+            title="Explorar asesorías"
+            description="Encuentra solicitudes de estudiantes y ofrece tu ayuda."
           />
         )}
         <ActionCard
-          href="/tutoring/requests"
-          icon={CalendarClock}
-          title="Asesorias"
-          description={
-            isTutor
-              ? 'Revisa las solicitudes de los estudiantes y publica tus propias demandas.'
-              : 'Publica lo que necesitas, recibe propuestas y acepta a tu tutor ideal.'
-          }
-        />
-        <ActionCard
-          href="/settings/password"
-          icon={KeyRound}
-          title="Seguridad"
-          description="Cambia tu contrasena de forma segura en dos pasos."
+          href="/tutoring/chats"
+          icon={MessageSquare}
+          title="Chats"
+          description="Conversa en tiempo real con tu tutor o estudiante en cada asesoría."
         />
       </section>
 

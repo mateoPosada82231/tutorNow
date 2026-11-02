@@ -33,4 +33,27 @@ public interface AsesoriaRepository extends JpaRepository<Asesoria, Long> {
             @Param("correo") String correo,
             @Param("estadoCancelada") EstadoAsesoria estadoCancelada,
             Pageable pageable);
+
+    @Query("""
+            SELECT a FROM Asesoria a
+            JOIN FETCH a.estudiante
+            JOIN FETCH a.tutor t
+            JOIN FETCH t.usuario
+            JOIN FETCH a.solicitud s
+            JOIN FETCH s.materia
+            WHERE a.id = :id
+            """)
+    Optional<Asesoria> findByIdConParticipantes(@Param("id") Long id);
+
+    @Query("""
+            SELECT a FROM Asesoria a
+            JOIN FETCH a.estudiante
+            JOIN FETCH a.tutor t
+            JOIN FETCH t.usuario
+            JOIN FETCH a.solicitud s
+            JOIN FETCH s.materia
+            WHERE a.estudiante.id = :usuarioId OR t.usuario.id = :usuarioId
+            ORDER BY a.createdAt DESC
+            """)
+    List<Asesoria> findByParticipante(@Param("usuarioId") Long usuarioId);
 }
