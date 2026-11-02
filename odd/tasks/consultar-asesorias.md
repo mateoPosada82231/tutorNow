@@ -19,9 +19,9 @@ Forecast: ~700 authored changed lines (backend ~90, frontend ~320, tests ~300) -
 
 | ID | Specs | Route | Status | Evidence |
 |----|-------|-------|--------|----------|
-| T1 | S2, S3, S6, S8 | inline | todo | - |
-| T2 | S2, S3, S4, S6 | inline | todo | - |
-| T3 | S5, S7, S8 | inline | todo | - |
+| T1 | S2, S3, S6, S8 | inline | done | `SolicitudAsesoriaRepository` + `AsesoriaRepository` queries, `SolicitudService.list` + `listAcceptedForTutor`, relaxed vista guard |
+| T2 | S2, S3, S4, S6 | inline | done | `TutoringRequestsPage` tutor tab division + filters, student tabs + filters |
+| T3 | S5, S7, S8 | inline | done | `ExplorePage` uses `Input`/`Select`, `q` param wired to backend |
 
 ## Log
 
@@ -43,3 +43,11 @@ Forecast: ~700 authored changed lines (backend ~90, frontend ~320, tests ~300) -
 - "Como estudiante" reuses the existing student vistas, which the backend previously rejected for tutors (403). The guard is relaxed to `ADMIN`-only so a tutor can see the solicitudes they published as a student.
 - Bug found while mapping: `/tutoring/explore` sends `vista=abiertas` while it is tutor-only, so the backend rejected it with 403 and the page failed to load. The relaxed guard fixes it.
 - Bug found while mapping: the explore search input never filtered anything (`searchQuery` was only used to show the "Limpiar" button). S7 closes that gap.
+
+### L4 — implementation completed (commit 7a590a0)
+- Backend: `SolicitudAsesoriaRepository.findFiltered` + `findFilteredPrioritized` now accept `q` (ILIKE on tema and materia.nombre); `AsesoriaRepository.findByTutorCorreo` accepts optional `estadoFiltro` (AsesoriaEstado) and `materiaId`
+- Backend: `SolicitudService.list` adds `q` param, relaxes vista guard to allow TUTOR (scoped to own solicitudes), rejects ADMIN; `listAcceptedForTutor` adds `estado` + `materiaId` optional filters
+- Frontend: `TutoringRequestsContent` branch for `isTutor` with two sub-tabs ("Como tutor" / "Como estudiante"); tutor tab calls `fetchAcceptedTutoringRequests` with estado + materia filters; estudiante tab calls `fetchTutoringRequests` with existing vista tabs + materia + q filters
+- Frontend: `ExplorePage` refactored to use `Input` + `Select` shared components; search now sends `q` parameter to backend
+- Types: `TutoringRequestFilters.estado` widened to `SolicitudEstado | AsesoriaEstado`
+- All 137 backend + 158 frontend tests pass

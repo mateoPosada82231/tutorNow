@@ -65,7 +65,7 @@ export default function ExplorePage() {
       {/* Filtros */}
       <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
+          <div className="relative flex-1 w-full sm:w-auto">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden="true" />
             <Input
               id="explore-search"
