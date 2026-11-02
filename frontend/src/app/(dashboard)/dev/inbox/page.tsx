@@ -68,7 +68,7 @@ export default function DevInboxPage() {
   if (loading) {
     return (
       <div className="flex min-h-48 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-poli" aria-label="Cargando bandeja simulada" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-poli" aria-label="Cargando Bandeja de entrada" />
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function DevInboxPage() {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold text-text-main md:text-3xl">Bandeja simulada</h1>
+        <h1 className="text-2xl font-bold text-text-main md:text-3xl">Bandeja de entrada</h1>
         <p className="max-w-2xl text-sm text-text-muted md:text-base">
           Aqui ves los correos de demostracion que envia el sistema: este envio es simulado y no
           llega a ninguna direccion real.
@@ -160,3 +160,4 @@ export default function DevInboxPage() {
     </div>
   );
 }
+

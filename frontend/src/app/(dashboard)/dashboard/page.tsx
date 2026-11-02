@@ -87,17 +87,28 @@ export default function DashboardPage() {
             <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-poli text-white shadow-md">
               <MessageSquare className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h2 className="text-base font-semibold text-text-main">
-              {totalUnread === 1
-                ? 'Tienes 1 mensaje sin leer'
-                : `Tienes ${totalUnread} mensajes sin leer`}
-            </h2>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-text-main">
+                {totalUnread === 1
+                  ? 'Tienes 1 mensaje sin leer'
+                  : `Tienes ${totalUnread} mensajes sin leer`}
+              </h2>
+              <p className="text-sm text-text-muted">
+                Cada mensaje nuevo genera un correo simulado en tu bandeja de entrada.
+              </p>
+            </div>
           </div>
           <Link
             href="/tutoring/chats"
             className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-poli px-4 py-2.5 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-poli-hover hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-poli sm:ml-auto"
           >
             Ver mensajes
+          </Link>
+          <Link
+            href="/dev/inbox"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-brand-poli/30 px-4 py-2.5 text-sm font-medium text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          >
+            Bandeja de entrada
           </Link>
         </section>
       )}

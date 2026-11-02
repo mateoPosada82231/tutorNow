@@ -88,6 +88,11 @@ describe('DashboardPage', () => {
       'href',
       '/tutoring/chats',
     );
+    expect(screen.getByText(/correo simulado/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /bandeja de entrada/i })).toHaveAttribute(
+      'href',
+      '/dev/inbox',
+    );
     await waitFor(() => expect(useChatUnreadStore.getState().getTotal()).toBe(3));
   });
 

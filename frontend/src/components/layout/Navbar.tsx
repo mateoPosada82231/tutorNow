@@ -9,7 +9,6 @@ import {
   ChevronDown,
   Inbox,
   KeyRound,
-  LayoutDashboard,
   LogOut,
   MessageSquare,
   User,
@@ -17,7 +16,6 @@ import {
   X,
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useChatUnreadStore } from "@/features/chat/stores/useChatUnreadStore";
 import { useChatUnreadSync } from "@/features/chat/hooks/useChatUnreadSync";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
@@ -36,7 +34,6 @@ type NavLinkItem = {
   href: string;
   icon: React.ElementType;
   label: string;
-  badge?: number;
 };
 type NavActionItem = {
   action: () => void;
@@ -53,7 +50,6 @@ export function Navbar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const isTutor = user?.role === "TUTOR";
-  const totalUnread = useChatUnreadStore((state) => state.getTotal());
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -91,22 +87,16 @@ export function Navbar() {
   }
 
   const navItems: NavLinkItem[] = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Panel" },
     { href: "/tutoring/requests/new", icon: MessageSquare, label: "Publicar asesoría" },
     { href: "/tutoring/requests", icon: MessageSquare, label: "Mis asesorías" },
     ...(isTutor ? [{ href: "/tutoring/explore", icon: BookOpenCheck, label: "Explorar asesorías" }] : []),
-    { href: "/tutoring/chats", icon: MessageSquare, label: "Chats", badge: totalUnread },
-    ...(isTutor ? [{ href: "/tutoring", icon: BookOpenCheck, label: "Panel de tutor" }] : []),
+    { href: "/tutoring/chats", icon: MessageSquare, label: "Chats" },
   ];
 
   const userItems: NavItem[] = [
     { href: "/profile", icon: User, label: "Mi perfil" },
-    { href: "/tutoring/requests/new", icon: MessageSquare, label: "Publicar asesoría" },
-    { href: "/tutoring/requests", icon: MessageSquare, label: "Mis asesorías" },
-    ...(isTutor ? [{ href: "/tutoring/explore", icon: BookOpenCheck, label: "Explorar asesorías" }] : []),
-    { href: "/tutoring/chats", icon: MessageSquare, label: "Chats", badge: totalUnread },
-    ...(isTutor ? [{ href: "/tutoring", icon: BookOpenCheck, label: "Panel de tutor" }] : []),
-    { href: "/dev/inbox", icon: Inbox, label: "Bandeja simulada" },
+    ...(isTutor ? [{ href: "/tutoring", icon: BookOpenCheck, label: "Panel del tutor" }] : []),
+    { href: "/dev/inbox", icon: Inbox, label: "Bandeja de entrada" },
     { href: "/settings/password", icon: KeyRound, label: "Cambiar contraseña" },
     { action: handleLogout, icon: LogOut, label: "Cerrar sesión", danger: true },
   ];
@@ -155,11 +145,6 @@ export function Navbar() {
                 >
                   <item.icon className="h-4 w-4 text-text-muted" aria-hidden="true" />
                   <span>{item.label}</span>
-                  {item.badge && item.badge > 0 && (
-                    <span className="ml-auto flex h-5 min-w-[18px] items-center justify-center rounded-full bg-brand-poli px-1.5 text-[10px] font-bold text-white">
-                      {item.badge > 99 ? "99+" : item.badge}
-                    </span>
-                  )}
                 </Link>
               ))}
             </div>
@@ -227,11 +212,6 @@ export function Navbar() {
                       >
                         <item.icon className="h-4 w-4 text-text-muted" aria-hidden="true" />
                         <span>{item.label}</span>
-                        {item.badge && item.badge > 0 && (
-                          <span className="ml-auto flex h-5 min-w-[18px] items-center justify-center rounded-full bg-brand-poli px-1.5 text-[10px] font-bold text-white">
-                            {item.badge > 99 ? "99+" : item.badge}
-                          </span>
-                        )}
                       </Link>
                     ) : (
                       <button
@@ -295,11 +275,6 @@ export function Navbar() {
                 >
                   <item.icon className="h-5 w-5" aria-hidden="true" />
                   <span>{item.label}</span>
-                  {item.badge && item.badge > 0 && (
-                    <span className="ml-auto flex h-5 min-w-[18px] items-center justify-center rounded-full bg-brand-poli px-1.5 text-[10px] font-bold text-white">
-                      {item.badge > 99 ? "99+" : item.badge}
-                    </span>
-                  )}
                 </Link>
               ))}
             </nav>

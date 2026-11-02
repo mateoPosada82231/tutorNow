@@ -40,15 +40,15 @@ describe('DevInboxPage', () => {
     vi.mocked(httpClient.get).mockReturnValue(new Promise(() => {}));
     render(<DevInboxPage />);
 
-    expect(screen.getByLabelText(/cargando bandeja simulada/i)).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /bandeja simulada/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/cargando bandeja de entrada/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /bandeja de entrada/i })).not.toBeInTheDocument();
   });
 
   it('muestra el estado vacio cuando no hay correos simulados', async () => {
     vi.mocked(httpClient.get).mockResolvedValue([]);
     render(<DevInboxPage />);
 
-    expect(await screen.findByRole('heading', { level: 1, name: /bandeja simulada/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: /bandeja de entrada/i })).toBeInTheDocument();
     expect(screen.getByText(/tu bandeja esta vacia/i)).toBeInTheDocument();
     expect(screen.getByText(/envio es simulado/i)).toBeInTheDocument();
   });
