@@ -221,7 +221,7 @@ function TutoringRequestsContent() {
         {tutorTab === 'tutor' ? (
           <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative flex-1 w-full sm:w-auto">
+              <div className="relative w-full sm:flex-1">
                 <Input
                   id="tutor-search"
                   label="Buscar"
@@ -281,7 +281,7 @@ function TutoringRequestsContent() {
             </nav>
             <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative flex-1 w-full sm:w-auto">
+                <div className="relative w-full sm:flex-1">
                   <Input
                     id="estudiante-search"
                     label="Buscar"
@@ -470,7 +470,7 @@ function TutoringRequestsContent() {
 
       <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative flex-1 w-full sm:w-auto">
+          <div className="relative w-full sm:flex-1">
             <Input
               id="estudiante-search-main"
               label="Buscar"
