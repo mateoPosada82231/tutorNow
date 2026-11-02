@@ -84,6 +84,11 @@ Decision asked and answered: "Bandeja simulada en la app" — simulated emails c
 - Email `kind` values shared across both sides: `verification` | `password_reset` | `password_change_confirmation` | `new_message`.
 - Native review assess (`422cfb4..41d8dc4`): tier `medium` (`executable_change`: DevInboxController), `review_due: false` (`under_budget`); no native review ceremony. Stray untracked `frontend/pnpm-lock.yaml` excluded from assessment inventory, pending user disposition.
 
+### L10 — menu restructure, user verbatim (2026-11-02)
+> quedo bien, solo hay que corregir unas cosas: quitale el "simulada" del nombre; quita el numero de mensajes entrantes al lado del boton para entrar al chat; en el hamburguesa pon: publicar asesorias, mis asesorias, explorar asesorias y chats ... panel no ya que con el titulo tambien se llega alla; en el menu desplegable del perfil quedara: mi perfil, panel del tutor, bandeja de entrada y cambiar contraseña
+
+Clarification answered: "Solo el badge del navbar" — the banner keeps its unread count, only the navbar badge is removed. Delivered in `8d68970`: hamburger/desktop main menu = Publicar asesoría, Mis asesorías, Explorar asesorías (tutor), Chats (no Panel, no Panel del tutor); user menu = Mi perfil, Panel del tutor (tutor), Bandeja de entrada, Cambiar contraseña (+ Cerrar sesión kept); "Bandeja simulada" renamed "Bandeja de entrada" everywhere; banner adds the simulated-email note and a secondary inbox link. RED observed (6 failing) before implementation; full suite 158/158.
+
 ### L10 — UX polish v2 (2026-10-29)
 - **Optimistic UI**: mensaje propio aparece INMEDIATAMENTE al hacer send (sombra + opacidad 70%), se reemplaza por el real cuando llega vía SSE (match por `clientMessageId`)
 - **Separadores de fecha** tipo WhatsApp: agrupa mensajes por día (Hoy / Ayer / Lunes 28 octubre)
