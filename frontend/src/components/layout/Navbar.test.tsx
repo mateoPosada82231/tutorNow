@@ -6,6 +6,10 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 const pushMock = vi.fn();
 
+vi.mock('@/features/chat/api/chatApi', () => ({
+  fetchChats: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, replace: vi.fn() }),
   usePathname: () => '/dashboard',

@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BookOpenCheck,
   ChevronDown,
+  Inbox,
   KeyRound,
   LayoutDashboard,
   LogOut,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatUnreadStore } from "@/features/chat/stores/useChatUnreadStore";
+import { useChatUnreadSync } from "@/features/chat/hooks/useChatUnreadSync";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 
 function initialsOf(fullName: string | undefined): string {
@@ -45,6 +47,7 @@ type NavActionItem = {
 type NavItem = NavLinkItem | NavActionItem;
 
 export function Navbar() {
+  useChatUnreadSync();
   const router = useRouter();
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
@@ -103,6 +106,7 @@ export function Navbar() {
     ...(isTutor ? [{ href: "/tutoring/explore", icon: BookOpenCheck, label: "Explorar asesorías" }] : []),
     { href: "/tutoring/chats", icon: MessageSquare, label: "Chats", badge: totalUnread },
     ...(isTutor ? [{ href: "/tutoring", icon: BookOpenCheck, label: "Panel de tutor" }] : []),
+    { href: "/dev/inbox", icon: Inbox, label: "Bandeja simulada" },
     { href: "/settings/password", icon: KeyRound, label: "Cambiar contraseña" },
     { action: handleLogout, icon: LogOut, label: "Cerrar sesión", danger: true },
   ];
