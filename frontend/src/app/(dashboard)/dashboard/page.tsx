@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BookOpen, CalendarClock, KeyRound, MessageSquare, User, type LucideIcon } from 'lucide-react';
+import { BookOpen, CalendarClock, MessageSquare, MessageSquarePlus, BookOpenCheck, type LucideIcon } from 'lucide-react';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useChatUnreadStore } from '@/features/chat/stores/useChatUnreadStore';
 
@@ -115,38 +115,34 @@ export default function DashboardPage() {
 
       <section aria-label="Accesos rapidos" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <ActionCard
-          href="/profile"
-          icon={User}
-          title="Mi perfil"
+          href="/tutoring/requests/new"
+          icon={MessageSquarePlus}
+          title="Publicar asesoría"
+          description="Publica lo que necesitas aprender y recibe propuestas de tutores."
+        />
+        <ActionCard
+          href="/tutoring/requests"
+          icon={CalendarClock}
+          title="Mis asesorías"
           description={
             isTutor
-              ? 'Actualiza tu informacion academica y tu perfil de tutor.'
-              : 'Actualiza tu informacion academica o conviertete en tutor.'
+              ? 'Revisa las solicitudes de los estudiantes y tus asesorias aceptadas.'
+              : 'Revisa el estado de tus solicitudes y asesorias aceptadas.'
           }
         />
         {isTutor && (
           <ActionCard
-            href="/tutoring"
-            icon={BookOpen}
-            title="Panel de tutor"
-            description="Gestiona tus asesorias, solicitudes recibidas y disponibilidad."
+            href="/tutoring/explore"
+            icon={BookOpenCheck}
+            title="Explorar asesorías"
+            description="Encuentra solicitudes de estudiantes y ofrece tu ayuda."
           />
         )}
         <ActionCard
-          href="/tutoring/requests"
-          icon={CalendarClock}
-          title="Asesorias"
-          description={
-            isTutor
-              ? 'Revisa las solicitudes de los estudiantes y publica tus propias demandas.'
-              : 'Publica lo que necesitas, recibe propuestas y acepta a tu tutor ideal.'
-          }
-        />
-        <ActionCard
-          href="/settings/password"
-          icon={KeyRound}
-          title="Seguridad"
-          description="Cambia tu contrasena de forma segura en dos pasos."
+          href="/tutoring/chats"
+          icon={MessageSquare}
+          title="Chats"
+          description="Conversa en tiempo real con tu tutor o estudiante en cada asesoría."
         />
       </section>
 

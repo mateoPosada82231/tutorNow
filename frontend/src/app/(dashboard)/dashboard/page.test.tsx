@@ -56,23 +56,38 @@ describe('DashboardPage', () => {
     });
   }
 
-  it('enlaza la tarjeta de asesorias al tablero para estudiantes', () => {
+  it('el grill de la landing replica el menu principal para estudiantes', () => {
     setState('ESTUDIANTE');
     render(<DashboardPage />);
 
-    const card = screen.getByRole('link', { name: /publica lo que necesitas/i });
-    expect(card).toHaveAttribute('href', '/tutoring/requests');
-    expect(screen.queryByRole('link', { name: /panel de tutor/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /publicar asesor[ií]a/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests/new',
+    );
+    expect(screen.getByRole('link', { name: /mis asesor[ií]as/i })).toHaveAttribute(
+      'href',
+      '/tutoring/requests',
+    );
+    expect(screen.getByRole('link', { name: /conversa en tiempo real con tu tutor/i })).toHaveAttribute(
+      'href',
+      '/tutoring/chats',
+    );
+    expect(screen.queryByRole('link', { name: /explorar asesor[ií]as/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /panel del tutor/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /mi perfil/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /cambia tu contrase/i })).not.toBeInTheDocument();
   });
 
-  it('enlaza la tarjeta de asesorias al tablero tambien para tutores', () => {
+  it('el grill de la landing replica el menu principal para tutores', () => {
     setState('TUTOR');
     render(<DashboardPage />);
 
-    const panel = screen.getByRole('link', { name: /panel de tutor/i });
-    expect(panel).toHaveAttribute('href', '/tutoring');
-
-    expect(screen.getByRole('link', { name: /publica tus propias demandas/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /explorar asesor[ií]as/i })).toHaveAttribute(
+      'href',
+      '/tutoring/explore',
+    );
+    expect(screen.queryByRole('link', { name: /panel del tutor/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /mis asesor[ií]as/i })).toHaveAttribute(
       'href',
       '/tutoring/requests',
     );
