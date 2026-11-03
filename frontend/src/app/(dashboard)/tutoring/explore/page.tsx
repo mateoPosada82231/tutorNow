@@ -65,7 +65,7 @@ export default function ExplorePage() {
       {/* Filtros */}
       <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:flex-1">
+          <div className="relative w-full min-w-0 sm:flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden="true" />
             <Input
               id="explore-search"
@@ -76,25 +76,29 @@ export default function ExplorePage() {
               className="min-h-[44px]"
             />
           </div>
-          <Select
-            id="explore-materia"
-            label="Materia"
-            placeholder="Todas las materias"
-            options={materias.map((m) => ({ value: m.id, label: m.label }))}
-            value={filters.materiaId ?? ''}
-            onChange={(e) => handleFilterChange('materiaId', e.target.value ? Number(e.target.value) : undefined)}
-          />
-          <Select
-            id="explore-modalidad"
-            label="Modalidad"
-            placeholder="Modalidad"
-            options={[
-              { value: 'VIRTUAL', label: 'Virtual' },
-              { value: 'PRESENCIAL', label: 'Presencial' },
-            ]}
-            value={filters.modalidad ?? ''}
-            onChange={(e) => handleFilterChange('modalidad', e.target.value || undefined)}
-          />
+          <div className="w-full sm:w-56 sm:shrink-0">
+            <Select
+              id="explore-materia"
+              label="Materia"
+              placeholder="Todas las materias"
+              options={materias.map((m) => ({ value: m.id, label: m.label }))}
+              value={filters.materiaId ?? ''}
+              onChange={(e) => handleFilterChange('materiaId', e.target.value ? Number(e.target.value) : undefined)}
+            />
+          </div>
+          <div className="w-full sm:w-40 sm:shrink-0">
+            <Select
+              id="explore-modalidad"
+              label="Modalidad"
+              placeholder="Modalidad"
+              options={[
+                { value: 'VIRTUAL', label: 'Virtual' },
+                { value: 'PRESENCIAL', label: 'Presencial' },
+              ]}
+              value={filters.modalidad ?? ''}
+              onChange={(e) => handleFilterChange('modalidad', e.target.value || undefined)}
+            />
+          </div>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}

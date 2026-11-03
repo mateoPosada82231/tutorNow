@@ -221,7 +221,7 @@ function TutoringRequestsContent() {
         {tutorTab === 'tutor' ? (
           <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="relative w-full sm:flex-1">
+              <div className="relative w-full min-w-0 sm:flex-1">
                 <Input
                   id="tutor-search"
                   label="Buscar"
@@ -230,22 +230,26 @@ function TutoringRequestsContent() {
                   onChange={(e) => setTutorFilters((p) => ({ ...p, q: e.target.value || undefined, page: 0 }))}
                 />
               </div>
-              <Select
-                id="tutor-estado"
-                label="Estado"
-                placeholder="Todos los estados"
-                options={ASESORIA_ESTADOS.map((e) => ({ value: e, label: e }))}
-                value={tutorFilters.estado ?? ''}
-                onChange={(e) => setTutorFilters((p) => ({ ...p, estado: (e.target.value as AsesoriaEstado | SolicitudEstado) || undefined, page: 0 }))}
-              />
-              <Select
-                id="tutor-materia"
-                label="Materia"
-                placeholder="Todas las materias"
-                options={materias.map((m) => ({ value: m.id, label: m.label }))}
-                value={tutorFilters.materiaId ?? ''}
-                onChange={(e) => setTutorFilters((p) => ({ ...p, materiaId: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
-              />
+              <div className="w-full sm:w-44 sm:shrink-0">
+                <Select
+                  id="tutor-estado"
+                  label="Estado"
+                  placeholder="Todos los estados"
+                  options={ASESORIA_ESTADOS.map((e) => ({ value: e, label: e }))}
+                  value={tutorFilters.estado ?? ''}
+                  onChange={(e) => setTutorFilters((p) => ({ ...p, estado: (e.target.value as AsesoriaEstado | SolicitudEstado) || undefined, page: 0 }))}
+                />
+              </div>
+              <div className="w-full sm:w-56 sm:shrink-0">
+                <Select
+                  id="tutor-materia"
+                  label="Materia"
+                  placeholder="Todas las materias"
+                  options={materias.map((m) => ({ value: m.id, label: m.label }))}
+                  value={tutorFilters.materiaId ?? ''}
+                  onChange={(e) => setTutorFilters((p) => ({ ...p, materiaId: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
+                />
+              </div>
               {tutorHasActiveFilters && (
                 <button
                   onClick={() => setTutorFilters({ page: 0, size: 20 })}
@@ -281,7 +285,7 @@ function TutoringRequestsContent() {
             </nav>
             <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative w-full sm:flex-1">
+                <div className="relative w-full min-w-0 sm:flex-1">
                   <Input
                     id="estudiante-search"
                     label="Buscar"
@@ -290,14 +294,16 @@ function TutoringRequestsContent() {
                     onChange={(e) => setEstudianteFilters((p) => ({ ...p, q: e.target.value || undefined, page: 0 }))}
                   />
                 </div>
-                <Select
-                  id="estudiante-materia"
-                  label="Materia"
-                  placeholder="Todas las materias"
-                  options={materias.map((m) => ({ value: m.id, label: m.label }))}
-                  value={estudianteFilters.materiaId ?? ''}
-                  onChange={(e) => setEstudianteFilters((p) => ({ ...p, materiaId: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
-                />
+                <div className="w-full sm:w-56 sm:shrink-0">
+                  <Select
+                    id="estudiante-materia"
+                    label="Materia"
+                    placeholder="Todas las materias"
+                    options={materias.map((m) => ({ value: m.id, label: m.label }))}
+                    value={estudianteFilters.materiaId ?? ''}
+                    onChange={(e) => setEstudianteFilters((p) => ({ ...p, materiaId: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
+                  />
+                </div>
                 {estudianteHasActiveFilters && (
                   <button
                     onClick={() => setEstudianteFilters((p) => ({ ...p, vista: tutorVista, page: 0, size: 20 }))}
@@ -470,7 +476,7 @@ function TutoringRequestsContent() {
 
       <div className="mb-6 flex flex-col gap-3 border border-border-color bg-bg-surface rounded-xl p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="relative w-full sm:flex-1">
+          <div className="relative w-full min-w-0 sm:flex-1">
             <Input
               id="estudiante-search-main"
               label="Buscar"
@@ -479,14 +485,16 @@ function TutoringRequestsContent() {
               onChange={(e) => setFilters((p) => ({ ...p, q: e.target.value || undefined, page: 0 }))}
             />
           </div>
-          <Select
-            id="estudiante-materia-main"
-            label="Materia"
-            placeholder="Todas las materias"
-            options={materias.map((m) => ({ value: m.id, label: m.label }))}
-            value={filters.materiaId ?? ''}
-            onChange={(e) => setFilters((p) => ({ ...p, materiaId: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
-          />
+          <div className="w-full sm:w-56 sm:shrink-0">
+            <Select
+              id="estudiante-materia-main"
+              label="Materia"
+              placeholder="Todas las materias"
+              options={materias.map((m) => ({ value: m.id, label: m.label }))}
+              value={filters.materiaId ?? ''}
+              onChange={(e) => setFilters((p) => ({ ...p, materiaId: e.target.value ? Number(e.target.value) : undefined, page: 0 }))}
+            />
+          </div>
           {hasActiveFilters && (
             <button
               onClick={() => setFilters({ vista, page: 0, size: 20 })}
