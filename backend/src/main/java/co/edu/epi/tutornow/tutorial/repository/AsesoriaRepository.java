@@ -27,11 +27,15 @@ public interface AsesoriaRepository extends JpaRepository<Asesoria, Long> {
     @Query("""
             SELECT a FROM Asesoria a
             WHERE a.tutor.usuario.correoElectronico = :correo
+              AND (:estadoFiltro IS NULL OR a.estado = :estadoFiltro)
+              AND (:materiaId IS NULL OR a.solicitud.materia.id = :materiaId)
             ORDER BY CASE WHEN a.estado = :estadoCancelada THEN 1 ELSE 0 END, a.createdAt DESC
             """)
     Page<Asesoria> findByTutorCorreo(
             @Param("correo") String correo,
             @Param("estadoCancelada") EstadoAsesoria estadoCancelada,
+            @Param("estadoFiltro") EstadoAsesoria estadoFiltro,
+            @Param("materiaId") Long materiaId,
             Pageable pageable);
 
     @Query("""

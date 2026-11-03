@@ -47,20 +47,23 @@ public class TutoringRequestController {
             @RequestParam(required = false) String modalidad,
             @RequestParam(required = false) String estado,
             @RequestParam(required = false) String vista,
+            @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         PageResponse<TutoringRequestResponse> response = solicitudService.list(
-                userDetails.getUsername(), materiaId, modalidad, estado, vista, page, size);
+                userDetails.getUsername(), materiaId, modalidad, estado, vista, page, size, q);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/accepted")
     public ResponseEntity<PageResponse<TutoringRequestResponse>> listAccepted(
             @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) String estado,
+            @RequestParam(required = false) Long materiaId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         PageResponse<TutoringRequestResponse> response = solicitudService.listAcceptedForTutor(
-                userDetails.getUsername(), page, size);
+                userDetails.getUsername(), estado, materiaId, page, size);
         return ResponseEntity.ok(response);
     }
 

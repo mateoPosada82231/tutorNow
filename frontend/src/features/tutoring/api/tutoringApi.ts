@@ -19,6 +19,7 @@ export function fetchTutoringRequests(
   if (filters.modalidad) params.set('modalidad', filters.modalidad);
   if (filters.estado) params.set('estado', filters.estado);
   if (filters.vista) params.set('vista', filters.vista);
+  if (filters.q) params.set('q', filters.q);
   params.set('page', String(filters.page ?? 0));
   params.set('size', String(filters.size ?? 10));
   return httpClient.get<Page<TutoringRequest>>(`/tutoring-requests?${params.toString()}`, {
@@ -33,8 +34,12 @@ export function fetchTutoringRequest(id: number): Promise<TutoringRequest> {
 export function fetchAcceptedTutoringRequests(
   page = 0,
   size = 20,
+  estado?: string,
+  materiaId?: number,
 ): Promise<Page<TutoringRequest>> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (estado) params.set('estado', estado);
+  if (materiaId) params.set('materiaId', String(materiaId));
   return httpClient.get<Page<TutoringRequest>>(
     `/tutoring-requests/accepted?${params.toString()}`,
     { auth: true },

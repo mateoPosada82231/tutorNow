@@ -84,33 +84,38 @@ public class SolicitudService {
             String estado,
             String vista,
             int page,
-            int size) {
+            int size,
+            String q) {
         Usuario usuario = findUsuario(correo);
         Modalidad modalidadFiltro = parseModalidad(modalidad);
         EstadoSolicitud estadoFiltro = parseEstado(estado);
         VistaSolicitudes vistaFiltro = parseVista(vista);
+        String textoFiltro = parseTexto(q);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
 
         Set<Long> materiasTutor = Set.of();
         boolean esTutor = usuario.getRol() == Rol.TUTOR;
-        if (vistaFiltro != null && usuario.getRol() != Rol.ESTUDIANTE) {
-            throw new ForbiddenException("Las vistas de asesorias son para estudiantes");
+        if (vistaFiltro != null && usuario.getRol() == Rol.ADMIN) {
+            throw new ForbiddenException("Los administradores no tienen asesorias propias");
         }
+        boolean vistaPersonal = vistaFiltro == VistaSolicitudes.COORDINACION
+                || vistaFiltro == VistaSolicitudes.HISTORIAL;
         Page<SolicitudAsesoria> resultado;
-        if (esTutor) {
+        if (esTutor && !vistaPersonal) {
             Tutor tutor = tutorRepository.findByUsuario_CorreoElectronico(correo).orElse(null);
             if (tutor != null) {
                 materiasTutor = tutor.getMaterias().stream().map(Materia::getId).collect(Collectors.toSet());
             }
             resultado = materiasTutor.isEmpty()
                     ? solicitudRepository.findFiltered(null, usuario.getId(), true,
-                            EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable)
+                            EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro,
+                            textoFiltro, pageable)
                     : solicitudRepository.findFilteredPrioritized(usuario.getId(), true,
                             EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro,
-                            List.copyOf(materiasTutor), pageable);
+                            textoFiltro, List.copyOf(materiasTutor), pageable);
         } else if (vistaFiltro == null) {
             resultado = solicitudRepository.findFiltered(usuario.getId(), usuario.getId(), false,
-                    EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, pageable);
+                    EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, textoFiltro, pageable);
         } else {
             resultado = switch (vistaFiltro) {
                 case ABIERTAS -> solicitudRepository.findOpenForStudent(usuario.getId(),
@@ -164,15 +169,18 @@ public class SolicitudService {
     @Transactional(readOnly = true)
     public PageResponse<TutoringRequestResponse> listAcceptedForTutor(
             String correo,
+            String estado,
+            Long materiaId,
             int page,
             int size) {
         Usuario usuario = findUsuario(correo);
         if (usuario.getRol() != Rol.TUTOR) {
             throw new ForbiddenException("Solo los tutores tienen asesorias aceptadas");
         }
+        EstadoAsesoria estadoFiltro = parseEstadoAsesoria(estado);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), MAX_PAGE_SIZE));
         Page<Asesoria> resultado = asesoriaRepository.findByTutorCorreo(
-                correo, EstadoAsesoria.CANCELADA, pageable);
+                correo, EstadoAsesoria.CANCELADA, estadoFiltro, materiaId, pageable);
 
         List<Long> ids = resultado.getContent().stream().map(a -> a.getSolicitud().getId()).toList();
         Map<Long, Long> conteos = ids.isEmpty()
@@ -350,6 +358,24 @@ public class SolicitudService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Estado no valido: " + valor);
         }
+    }
+
+    private EstadoAsesoria parseEstadoAsesoria(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        try {
+            return EstadoAsesoria.valueOf(valor.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Estado de asesoria no valido: " + valor);
+        }
+    }
+
+    private String parseTexto(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+        return "%" + valor.trim().toLowerCase() + "%";
     }
 
     private VistaSolicitudes parseVista(String valor) {

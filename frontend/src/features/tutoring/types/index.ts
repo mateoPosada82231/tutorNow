@@ -99,8 +99,9 @@ export interface ProposalRequest {
 export interface TutoringRequestFilters {
   materiaId?: number;
   modalidad?: Modalidad;
-  estado?: SolicitudEstado;
+  estado?: SolicitudEstado | AsesoriaEstado;
   vista?: VistaSolicitudes;
+  q?: string;
   page?: number;
   size?: number;
 }

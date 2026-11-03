@@ -23,6 +23,11 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/features/tutoring/api/tutoringApi', () => ({
   fetchTutoringRequests: vi.fn(),
+  fetchCatalogoMaterias: vi.fn().mockResolvedValue([]),
+  fetchAcceptedTutoringRequests: vi.fn().mockResolvedValue({
+    data: [],
+    pagination: { page: 0, size: 20, totalElements: 0, totalPages: 0 },
+  }),
 }));
 
 function buildAsesoria(overrides: Partial<Asesoria> = {}): Asesoria {
@@ -81,7 +86,7 @@ describe('TutoringRequestsPage', () => {
     expect(screen.getByText(/gestiona las asesorias que publicaste/i)).toBeInTheDocument();
   });
 
-  it('titula "Asesorias" con copy de feed global priorizado para tutores', async () => {
+  it('titula "Mis asesorias" y muestra division tutor/estudiante para tutores', async () => {
     useAuthStore.setState({
       token: 'token',
       user: { id: 3, email: 'tutor@elpoli.edu.co', fullName: 'Carlos Gomez', role: 'TUTOR' },
@@ -89,16 +94,15 @@ describe('TutoringRequestsPage', () => {
     });
     render(<TutoringRequestsPage />);
 
-    expect(await screen.findByRole('heading', { level: 1, name: /^asesorias$/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(/aqui van primero las que ajustan a tu perfil/i),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /publicar demanda/i })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { level: 1, name: /mis asesorias/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /como tutor/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /como estudiante/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /publicar asesoria/i })).toHaveAttribute(
       'href',
       '/tutoring/requests/new',
     );
     expect(screen.queryByRole('link', { name: /por aceptar/i })).not.toBeInTheDocument();
-    await waitFor(() => expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({}));
+    await waitFor(() => expect(tutoringApi.fetchAcceptedTutoringRequests).toHaveBeenCalled());
   });
 
   it('muestra el estado vacio propio cuando el estudiante no ha publicado', async () => {
@@ -137,10 +141,9 @@ describe('TutoringRequestsPage', () => {
       '/tutoring/requests?vista=historial',
     );
     await waitFor(() =>
-      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({
-        vista: 'abiertas',
-        size: 20,
-      }),
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith(
+        expect.objectContaining({ vista: 'abiertas', size: 20 }),
+      ),
     );
   });
 
@@ -175,10 +178,9 @@ describe('TutoringRequestsPage', () => {
       '/tutoring/requests/1?from=requests&vista=coordinacion',
     );
     await waitFor(() =>
-      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({
-        vista: 'coordinacion',
-        size: 20,
-      }),
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith(
+        expect.objectContaining({ vista: 'coordinacion', size: 20 }),
+      ),
     );
   });
 
@@ -216,10 +218,9 @@ describe('TutoringRequestsPage', () => {
       '/tutoring/requests/9?from=requests&vista=historial',
     );
     await waitFor(() =>
-      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith({
-        vista: 'historial',
-        size: 20,
-      }),
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith(
+        expect.objectContaining({ vista: 'historial', size: 20 }),
+      ),
     );
   });
 });
