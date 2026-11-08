@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import NewTutoringRequestPage from './page';
+import * as tutoringApi from '@/features/tutoring/api/tutoringApi';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 vi.mock('next/navigation', () => ({
@@ -16,13 +17,23 @@ vi.mock('next/link', () => ({
 }));
 
 vi.mock('@/features/tutoring/api/tutoringApi', () => ({
-  fetchCatalogoMaterias: vi.fn().mockResolvedValue([{ id: 1, label: 'Matematicas II' }]),
+  fetchCatalogoMaterias: vi.fn(),
   createTutoringRequest: vi.fn(),
+  fetchMisResenas: vi.fn(),
 }));
 
 describe('NewTutoringRequestPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(tutoringApi.fetchCatalogoMaterias).mockResolvedValue([
+      { id: 1, label: 'Matematicas II' },
+    ]);
+    vi.mocked(tutoringApi.fetchMisResenas).mockResolvedValue({
+      promedioRating: null,
+      totalResenas: 0,
+      resenasRecibidas: [],
+      pendientes: [],
+    });
   });
 
   function setState(role: 'ESTUDIANTE' | 'TUTOR') {
@@ -57,5 +68,31 @@ describe('NewTutoringRequestPage', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /publicar asesoria/i })).toBeEnabled(),
     );
+  });
+
+  it('bloquea la publicacion cuando hay resenas pendientes', async () => {
+    setState('ESTUDIANTE');
+    vi.mocked(tutoringApi.fetchMisResenas).mockResolvedValue({
+      promedioRating: null,
+      totalResenas: 0,
+      resenasRecibidas: [],
+      pendientes: [
+        {
+          asesoriaId: 11,
+          solicitudId: 9,
+          tema: 'Integrales por partes',
+          contraparte: 'Carlos Gomez',
+          finalizadaAt: '2026-10-20T10:00:00Z',
+        },
+      ],
+    });
+    render(<NewTutoringRequestPage />);
+
+    expect(
+      await screen.findByText(/debes calificar tus asesorías finalizadas/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /publicar asesoria/i }),
+    ).toBeDisabled();
   });
 });

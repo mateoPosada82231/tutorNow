@@ -111,7 +111,7 @@ public class PropuestaService {
                 .estado(EstadoAsesoria.PENDIENTE)
                 .build();
         asesoria = asesoriaRepository.save(asesoria);
-        AsesoriaResponse asesoriaResponse = mapper.toAsesoriaResponse(asesoria);
+        AsesoriaResponse asesoriaResponse = mapper.toAsesoriaResponse(asesoria, solicitud.getEstudiante());
 
         List<ProposalResponse> propuestas = propuestaRepository
                 .findBySolicitudIdOrderByCreatedAtAsc(solicitud.getId()).stream()

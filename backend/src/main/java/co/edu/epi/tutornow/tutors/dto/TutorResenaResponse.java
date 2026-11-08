@@ -23,9 +23,6 @@ public class TutorResenaResponse {
     @JsonProperty("comentario")
     private String comentario;
 
-    @JsonProperty("autor")
-    private String autor;
-
     @JsonProperty("createdAt")
     private OffsetDateTime createdAt;
 }

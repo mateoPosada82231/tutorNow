@@ -14,6 +14,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('../api/tutoringApi', () => ({
   fetchCatalogoMaterias: vi.fn(),
   createTutoringRequest: vi.fn(),
+  fetchMisResenas: vi.fn(),
 }));
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
@@ -34,6 +35,12 @@ describe('PublishRequestForm', () => {
       { id: 1, label: 'Matematicas II' },
       { id: 2, label: 'Calculo I' },
     ]);
+    vi.mocked(tutoringApi.fetchMisResenas).mockResolvedValue({
+      promedioRating: null,
+      totalResenas: 0,
+      resenasRecibidas: [],
+      pendientes: [],
+    });
   });
 
   it('renderiza todos los campos del formulario', async () => {

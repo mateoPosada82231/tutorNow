@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
@@ -9,13 +10,13 @@ import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { HttpError } from '@/lib/httpClient';
-import { createTutoringRequest, fetchCatalogoMaterias } from '../api/tutoringApi';
+import { createTutoringRequest, fetchCatalogoMaterias, fetchMisResenas } from '../api/tutoringApi';
 import {
   hasFieldErrors,
   validateTutoringRequest,
   type TutoringRequestFieldErrors,
 } from '../hooks/validation';
-import type { CatalogItem, Modalidad } from '../types';
+import type { CatalogItem, Modalidad, ResenaPendiente } from '../types';
 
 const modalidadOptions = [
   { value: 'VIRTUAL', label: 'Virtual' },
@@ -28,6 +29,9 @@ export function PublishRequestForm() {
   const [materias, setMaterias] = useState<CatalogItem[]>([]);
   const [materiasLoading, setMateriasLoading] = useState(true);
   const [materiasError, setMateriasError] = useState<string | null>(null);
+
+  const [pendientes, setPendientes] = useState<ResenaPendiente[]>([]);
+  const [pendientesLoading, setPendientesLoading] = useState(true);
 
   const [materiaId, setMateriaId] = useState<number>(0);
   const [tema, setTema] = useState('');
@@ -51,13 +55,32 @@ export function PublishRequestForm() {
     }
   }
 
+  async function loadPendientes() {
+    setPendientesLoading(true);
+    try {
+      const resumen = await fetchMisResenas();
+      setPendientes(resumen.pendientes);
+    } catch {
+      // El backend sigue bloqueando la publicacion aunque esta consulta falle.
+      setPendientes([]);
+    } finally {
+      setPendientesLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadMaterias();
+    void loadPendientes();
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
+
+    if (pendientes.length > 0) {
+      setFormError('Debes calificar tus asesorías finalizadas antes de publicar una nueva solicitud.');
+      return;
+    }
 
     const data = {
       materiaId,
@@ -76,7 +99,10 @@ export function PublishRequestForm() {
       await createTutoringRequest(data);
       router.push('/tutoring/requests');
     } catch (err) {
-      if (err instanceof HttpError && err.errors) {
+      if (err instanceof HttpError && err.status === 409) {
+        setFormError(err.message);
+        await loadPendientes();
+      } else if (err instanceof HttpError && err.errors) {
         const mapped: TutoringRequestFieldErrors = {};
         if (err.errors.materiaId) mapped.materiaId = err.errors.materiaId;
         if (err.errors.tema) mapped.tema = err.errors.tema;
@@ -101,6 +127,24 @@ export function PublishRequestForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       {formError ? <Alert type="error">{formError}</Alert> : null}
+
+      {pendientes.length > 0 ? (
+        <Alert type="error">
+          <p>Debes calificar tus asesorías finalizadas antes de publicar una nueva solicitud.</p>
+          <ul className="mt-2 list-disc pl-5">
+            {pendientes.map((pendiente) => (
+              <li key={pendiente.asesoriaId}>
+                <Link
+                  href={`/tutoring/requests/${pendiente.solicitudId}`}
+                  className="font-semibold underline focus:outline-none focus:ring-2 focus:ring-brand-poli"
+                >
+                  {pendiente.tema}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Alert>
+      ) : null}
 
       {materiasLoading ? (
         <div className="flex items-center gap-2 rounded-lg border border-border-color bg-bg-surface px-3 py-2 text-sm text-text-muted">
@@ -193,7 +237,7 @@ export function PublishRequestForm() {
         </p>
       </div>
 
-      <Button type="submit" disabled={submitting || materiasLoading}>
+      <Button type="submit" disabled={submitting || materiasLoading || pendientesLoading || pendientes.length > 0}>
         {submitting ? <Spinner size="sm" /> : 'Publicar asesoria'}
       </Button>
     </form>

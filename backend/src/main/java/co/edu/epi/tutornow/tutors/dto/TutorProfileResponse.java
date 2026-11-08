@@ -30,6 +30,12 @@ public class TutorProfileResponse {
     @JsonProperty("disponibilidad")
     private List<TutorSlotResponse> disponibilidad;
 
+    @JsonProperty("promedioRating")
+    private Double promedioRating;
+
+    @JsonProperty("totalResenas")
+    private long totalResenas;
+
     @JsonProperty("resenas")
     private List<TutorResenaResponse> resenas;
 }

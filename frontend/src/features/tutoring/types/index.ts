@@ -10,7 +10,26 @@ export type PropuestaEstado = 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
 
 export type AsesoriaEstado = 'PENDIENTE' | 'FINALIZADA' | 'EVALUADA' | 'CANCELADA';
 
+export type EstadoEvaluacion = 'PENDIENTE' | 'ESPERANDO_CONTRAPARTE' | 'COMPLETA';
+
+export type RolAutorResena = 'ESTUDIANTE' | 'TUTOR';
+
 export type VistaSolicitudes = 'abiertas' | 'coordinacion' | 'historial';
+
+export interface Resena {
+  id: number;
+  rolAutor: RolAutorResena;
+  rating: number;
+  comentario: string;
+  createdAt: string;
+}
+
+export interface TutorResena {
+  id: number;
+  rating: number;
+  comentario: string;
+  createdAt: string;
+}
 
 export interface Asesoria {
   id: number;
@@ -20,20 +39,15 @@ export interface Asesoria {
   confirmadaEstudiante: boolean;
   confirmadaTutor: boolean;
   finalizadaAt: string | null;
+  estadoEvaluacion?: EstadoEvaluacion;
+  miResena?: Resena | null;
+  resenaContraparte?: Resena | null;
   tutor: {
     id: number;
     fullName: string;
     biografia: string;
     materias: CatalogItem[];
   };
-  createdAt: string;
-}
-
-export interface Resena {
-  id: number;
-  rating: number;
-  comentario: string;
-  autor: string;
   createdAt: string;
 }
 
@@ -49,7 +63,9 @@ export interface TutorProfile {
   biografia: string;
   materias: CatalogItem[];
   disponibilidad: TutorSlot[];
-  resenas: Resena[];
+  promedioRating?: number | null;
+  totalResenas?: number;
+  resenas: TutorResena[];
 }
 
 export interface Proposal {
@@ -94,6 +110,33 @@ export interface TutoringRequestRequest {
 
 export interface ProposalRequest {
   mensaje: string;
+}
+
+export interface ResenaRequest {
+  rating: number;
+  comentario: string;
+}
+
+export interface ResenaPendiente {
+  asesoriaId: number;
+  solicitudId: number;
+  tema: string;
+  contraparte: string;
+  finalizadaAt: string;
+}
+
+export interface ResenaRecibida {
+  id: number;
+  rating: number;
+  comentario: string;
+  createdAt: string;
+}
+
+export interface MisResenas {
+  promedioRating: number | null;
+  totalResenas: number;
+  resenasRecibidas: ResenaRecibida[];
+  pendientes: ResenaPendiente[];
 }
 
 export interface TutoringRequestFilters {

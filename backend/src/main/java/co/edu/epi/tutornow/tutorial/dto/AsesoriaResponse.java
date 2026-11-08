@@ -38,6 +38,15 @@ public class AsesoriaResponse {
     @JsonProperty("finalizadaAt")
     private OffsetDateTime finalizadaAt;
 
+    @JsonProperty("estadoEvaluacion")
+    private String estadoEvaluacion;
+
+    @JsonProperty("miResena")
+    private ResenaResponse miResena;
+
+    @JsonProperty("resenaContraparte")
+    private ResenaResponse resenaContraparte;
+
     @JsonProperty("createdAt")
     private OffsetDateTime createdAt;
 }

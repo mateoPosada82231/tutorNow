@@ -2,9 +2,11 @@ import { httpClient } from '@/lib/httpClient';
 import type {
   Asesoria,
   CatalogItem,
+  MisResenas,
   Page,
   Proposal,
   ProposalRequest,
+  ResenaRequest,
   TutorProfile,
   TutoringRequest,
   TutoringRequestFilters,
@@ -58,6 +60,17 @@ export function finishAsesoria(asesoriaId: number): Promise<Asesoria> {
   return httpClient.put<Asesoria>(`/asesorias/${asesoriaId}/finalizar`, undefined, {
     auth: true,
   });
+}
+
+export function createAsesoriaResena(
+  asesoriaId: number,
+  data: ResenaRequest,
+): Promise<Asesoria> {
+  return httpClient.post<Asesoria>(`/asesorias/${asesoriaId}/resenas`, data, { auth: true });
+}
+
+export function fetchMisResenas(): Promise<MisResenas> {
+  return httpClient.get<MisResenas>('/resenas/me', { auth: true });
 }
 
 export function createProposal(solicitudId: number, data: ProposalRequest): Promise<Proposal> {

@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, MessageSquareQuote, Star, User } from 'lucide-react';
+import { ArrowLeft, MessageSquareQuote, User } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
 import { AvailabilityGrid, slotKeyFromHoraInicio } from '@/features/schedule';
+import { TutorRatingSummary } from '@/features/tutoring/components/TutorRatingSummary';
+import { StarRating } from '@/features/tutoring/components/StarRating';
 import {
   acceptProposal,
   fetchTutorProfile,
@@ -171,6 +173,10 @@ function TutorProfileContent() {
           <div>
             <h1 className="text-xl font-semibold text-text-main md:text-2xl">{profile.fullName}</h1>
             <p className="mt-0.5 text-sm text-text-muted">Tutor</p>
+            <TutorRatingSummary
+              promedio={profile.promedioRating}
+              total={profile.totalResenas}
+            />
           </div>
         </div>
 
@@ -233,10 +239,10 @@ function TutorProfileContent() {
                   key={resena.id}
                   className="rounded-lg border border-border-color bg-bg-primary p-3 text-sm text-text-main"
                 >
-                  <div className="flex items-center gap-2" aria-label={`Calificacion ${resena.rating}`} >
-                    <Star className="h-4 w-4 text-brand-accent" aria-hidden="true" />
+                  <div className="flex items-center gap-2">
+                    <StarRating rating={resena.rating} />
                     <span className="text-xs font-semibold">{resena.rating}/5</span>
-                    <span className="ml-auto text-xs text-text-muted">{resena.autor}</span>
+                    <span className="ml-auto text-xs text-text-muted">Reseña anónima</span>
                   </div>
                   <p className="mt-2">{resena.comentario}</p>
                 </li>

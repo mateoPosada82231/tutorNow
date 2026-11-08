@@ -33,6 +33,10 @@ export function AcceptedRequestCard({ request, onUpdated, detailHref }: Accepted
   const contraparte = request.isOwner
     ? (request.asesoria?.tutor.fullName ?? 'Por asignar')
     : request.estudiante.fullName;
+  const miResena = request.asesoria?.miResena ?? null;
+  const pendientePorCalificar = request.asesoria?.estado === 'FINALIZADA' && !miResena;
+  const esperandoContraparte = request.asesoria?.estado === 'FINALIZADA' && miResena != null;
+  const detailUrl = detailHref ?? `/tutoring/requests/${request.id}?from=agenda`;
 
   return (
     <article className="flex h-full flex-col gap-3 rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-success hover:shadow-lg md:p-6">
@@ -82,9 +86,27 @@ export function AcceptedRequestCard({ request, onUpdated, detailHref }: Accepted
         <AsesoriaActions request={request} onUpdated={onUpdated} />
       )}
 
+      {pendientePorCalificar && (
+        <p className="rounded-lg border border-brand-poli/30 bg-brand-poli/10 p-3 text-sm text-brand-poli">
+          Pendiente por calificar.{' '}
+          <Link
+            href={detailUrl}
+            className="font-semibold underline focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          >
+            Calificar asesoría
+          </Link>
+        </p>
+      )}
+
+      {esperandoContraparte && (
+        <p className="rounded-lg border border-dashed border-border-color bg-bg-primary p-3 text-sm text-text-muted">
+          Tu reseña está guardada. Esperando la reseña de la otra parte.
+        </p>
+      )}
+
       <div className="mt-auto flex items-center justify-end pt-2">
         <Link
-          href={detailHref ?? `/tutoring/requests/${request.id}?from=agenda`}
+          href={detailUrl}
           className="group inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-poli transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-poli/10 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-poli motion-reduce:transform-none motion-reduce:transition-none"
         >
           Ver asesoría
