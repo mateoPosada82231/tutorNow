@@ -42,8 +42,13 @@ export default function ProfilePage() {
       setIsTutor(profileData.isTutor);
       try {
         setResenas(await fetchMisResenas());
-      } catch {
+      } catch (err) {
         setResenas(null);
+        if (err instanceof HttpError) {
+          setError(err.message);
+        } else {
+          setError('No se pudieron cargar tus reseñas. Intenta mas tarde.');
+        }
       }
       if (profileData.isTutor) {
         try {

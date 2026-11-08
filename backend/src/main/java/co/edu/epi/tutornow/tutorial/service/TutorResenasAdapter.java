@@ -23,25 +23,20 @@ public class TutorResenasAdapter implements TutorResenasPort {
     @Override
     @Transactional(readOnly = true)
     public TutorResenasResumen obtenerResenas(Long tutorId) {
-        Object[] stats = resenaRepository.calcularPromedioTutor(
-                tutorId, RolAutorResena.ESTUDIANTE, EstadoAsesoria.EVALUADA);
-
-        Double promedio = null;
-        long total = 0;
-        if (stats != null && stats.length >= 2) {
-            if (stats[0] != null) {
-                promedio = redondear(((Number) stats[0]).doubleValue());
-            }
-            if (stats[1] != null) {
-                total = ((Number) stats[1]).longValue();
-            }
-        }
-
         List<TutorResenaResponse> resenas = resenaRepository
                 .findPublicasPorTutor(tutorId, RolAutorResena.ESTUDIANTE, EstadoAsesoria.EVALUADA)
                 .stream()
                 .map(this::toResponse)
                 .toList();
+
+        Double promedio = null;
+        long total = resenas.size();
+        if (!resenas.isEmpty()) {
+            double suma = resenas.stream()
+                    .mapToDouble(TutorResenaResponse::getRating)
+                    .sum();
+            promedio = redondear(suma / resenas.size());
+        }
 
         return new TutorResenasResumen(promedio, total, resenas);
     }

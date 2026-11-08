@@ -84,20 +84,6 @@ public class ResenaService {
     public MisResenasResponse obtenerMisResenas(String correo) {
         Usuario usuario = findUsuario(correo);
 
-        Object[] stats = resenaRepository.calcularPromedioEstudiante(
-                usuario.getId(), RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA);
-
-        Double promedio = null;
-        long total = 0;
-        if (stats != null && stats.length >= 2) {
-            if (stats[0] != null) {
-                promedio = redondear(((Number) stats[0]).doubleValue());
-            }
-            if (stats[1] != null) {
-                total = ((Number) stats[1]).longValue();
-            }
-        }
-
         List<ResenaRecibidaResponse> recibidas = resenaRepository
                 .findRecibidasPorEstudiante(
                         usuario.getId(), RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA)
@@ -109,6 +95,15 @@ public class ResenaService {
                         .createdAt(r.getCreatedAt())
                         .build())
                 .toList();
+
+        Double promedio = null;
+        long total = recibidas.size();
+        if (!recibidas.isEmpty()) {
+            double suma = recibidas.stream()
+                    .mapToDouble(ResenaRecibidaResponse::getRating)
+                    .sum();
+            promedio = redondear(suma / recibidas.size());
+        }
 
         List<ResenaPendienteResponse> pendientes = asesoriaRepository
                 .findPendientesDeResena(usuario.getId(), EstadoAsesoria.FINALIZADA)

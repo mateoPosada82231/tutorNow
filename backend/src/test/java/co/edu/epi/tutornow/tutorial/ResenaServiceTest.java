@@ -212,16 +212,22 @@ class ResenaServiceTest {
         @Test
         @DisplayName("Devuelve promedio privado, resenas recibidas y pendientes")
         void devuelveResumen() {
-            Resena recibida = Resena.builder()
+            Resena recibida1 = Resena.builder()
                     .id(100L).asesoria(asesoria).autor(tutorUsuario)
-                    .rolAutor(RolAutorResena.TUTOR).rating(4)
+                    .rolAutor(RolAutorResena.TUTOR).rating(5)
                     .comentario("Buen estudiante").createdAt(OffsetDateTime.now()).build();
+            Resena recibida2 = Resena.builder()
+                    .id(101L).asesoria(asesoria).autor(tutorUsuario)
+                    .rolAutor(RolAutorResena.TUTOR).rating(4)
+                    .comentario("Bien").createdAt(OffsetDateTime.now()).build();
+            Resena recibida3 = Resena.builder()
+                    .id(102L).asesoria(asesoria).autor(tutorUsuario)
+                    .rolAutor(RolAutorResena.TUTOR).rating(5)
+                    .comentario("Muy bien").createdAt(OffsetDateTime.now()).build();
             when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
                     .thenReturn(Optional.of(estudiante));
-            when(resenaRepository.calcularPromedioEstudiante(1L, RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA))
-                    .thenReturn(new Object[]{4.666, 3L});
             when(resenaRepository.findRecibidasPorEstudiante(1L, RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA))
-                    .thenReturn(List.of(recibida));
+                    .thenReturn(List.of(recibida1, recibida2, recibida3));
             when(asesoriaRepository.findPendientesDeResena(1L, EstadoAsesoria.FINALIZADA))
                     .thenReturn(List.of(asesoria));
 
@@ -229,7 +235,7 @@ class ResenaServiceTest {
 
             assertThat(response.getPromedioRating()).isEqualTo(4.7);
             assertThat(response.getTotalResenas()).isEqualTo(3L);
-            assertThat(response.getResenasRecibidas()).hasSize(1);
+            assertThat(response.getResenasRecibidas()).hasSize(3);
             assertThat(response.getResenasRecibidas().get(0).getComentario()).isEqualTo("Buen estudiante");
             assertThat(response.getPendientes()).hasSize(1);
             assertThat(response.getPendientes().get(0).getAsesoriaId()).isEqualTo(20L);
