@@ -33,6 +33,7 @@ vi.mock('@/features/tutoring/api/tutoringApi', () => ({
   createProposal: vi.fn(),
   acceptProposal: vi.fn(),
   rejectProposal: vi.fn(),
+  createAsesoriaResena: vi.fn(),
 }));
 
 function buildRequest(overrides: Partial<TutoringRequest> = {}): TutoringRequest {

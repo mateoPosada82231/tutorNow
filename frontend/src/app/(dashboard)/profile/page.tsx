@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { HttpError } from '@/lib/httpClient';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +10,9 @@ import { Spinner } from '@/components/ui/Spinner';
 import { BecomeTutorModal } from '@/features/profile/components/BecomeTutorModal';
 import { ProfileForm } from '@/features/profile/components/ProfileForm';
 import { TutorProfileForm } from '@/features/profile/components/TutorProfileForm';
+import { StudentRatingSummary } from '@/features/tutoring/components/StudentRatingSummary';
+import { fetchMisResenas } from '@/features/tutoring/api/tutoringApi';
+import type { MisResenas } from '@/features/tutoring/types';
 import {
   fetchMaterias,
   fetchMyProfile,
@@ -22,6 +26,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [tutor, setTutor] = useState<TutorProfile | null>(null);
   const [materias, setMaterias] = useState<CatalogItem[]>([]);
+  const [resenas, setResenas] = useState<MisResenas | null>(null);
   const [isTutor, setIsTutor] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +40,16 @@ export default function ProfilePage() {
       setProfile(profileData);
       setMaterias(materiasData);
       setIsTutor(profileData.isTutor);
+      try {
+        setResenas(await fetchMisResenas());
+      } catch (err) {
+        setResenas(null);
+        if (err instanceof HttpError) {
+          setError(err.message);
+        } else {
+          setError('No se pudieron cargar tus reseñas. Intenta mas tarde.');
+        }
+      }
       if (profileData.isTutor) {
         try {
           const tutorData = await fetchMyTutorProfile();
@@ -93,7 +108,15 @@ export default function ProfilePage() {
 
       {isTutor && tutor ? (
         <section className="rounded-2xl border border-border-color bg-bg-surface p-6 shadow-sm transition-colors duration-300">
-          <h2 className="mb-4 text-lg font-semibold text-text-main">Perfil de tutor</h2>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold text-text-main">Perfil de tutor</h2>
+            <Link
+              href={`/tutoring/tutors/${tutor.id}`}
+              className="inline-flex min-h-[44px] items-center rounded-lg px-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+            >
+              Ver mi perfil público
+            </Link>
+          </div>
           <TutorProfileForm tutor={tutor} materias={materias} onSaved={setTutor} />
         </section>
       ) : (
@@ -108,6 +131,38 @@ export default function ProfilePage() {
           </Button>
         </section>
       )}
+
+      {resenas && resenas.pendientes.length > 0 ? (
+        <section className="rounded-2xl border border-brand-poli/30 bg-brand-poli/10 p-4 shadow-sm transition-colors duration-300 md:p-6">
+          <h2 className="text-lg font-semibold text-text-main">Reseñas pendientes</h2>
+          <p className="mt-1 text-sm text-text-muted">
+            Debes calificar estas asesorías finalizadas antes de publicar una nueva solicitud.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {resenas.pendientes.map((pendiente) => (
+              <li key={pendiente.asesoriaId}>
+                <Link
+                  href={`/tutoring/requests/${pendiente.solicitudId}`}
+                  className="flex min-h-[44px] items-center justify-between gap-2 rounded-lg border border-border-color bg-bg-surface px-3 py-2 text-sm text-text-main transition-colors duration-200 hover:border-brand-poli focus:outline-none focus:ring-2 focus:ring-brand-poli"
+                >
+                  <span className="font-medium">{pendiente.tema}</span>
+                  <span className="shrink-0 text-xs font-semibold text-brand-poli">
+                    Calificar
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {resenas && (profile.role === 'ESTUDIANTE' || resenas.totalResenas > 0) ? (
+        <StudentRatingSummary
+          promedio={resenas.promedioRating}
+          total={resenas.totalResenas}
+          resenas={resenas.resenasRecibidas}
+        />
+      ) : null}
 
       <BecomeTutorModal
         open={modalOpen}

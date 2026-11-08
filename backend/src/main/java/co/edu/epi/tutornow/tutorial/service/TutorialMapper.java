@@ -3,11 +3,14 @@ package co.edu.epi.tutornow.tutorial.service;
 import co.edu.epi.tutornow.catalog.dto.CatalogItemResponse;
 import co.edu.epi.tutornow.tutorial.dto.AsesoriaResponse;
 import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
+import co.edu.epi.tutornow.tutorial.dto.ResenaResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutorBriefResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
 import co.edu.epi.tutornow.tutorial.dto.UserBriefResponse;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
+import co.edu.epi.tutornow.tutorial.model.Resena;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.users.model.Usuario;
@@ -49,7 +52,33 @@ public class TutorialMapper {
                 .build();
     }
 
-    public AsesoriaResponse toAsesoriaResponse(Asesoria asesoria) {
+    public AsesoriaResponse toAsesoriaResponse(Asesoria asesoria, Usuario viewer) {
+        List<Resena> resenas = asesoria.getResenas() == null ? List.of() : asesoria.getResenas();
+        Resena miResena = viewer == null
+                ? null
+                : resenas.stream()
+                        .filter(r -> r.getAutor() != null && r.getAutor().getId().equals(viewer.getId()))
+                        .findFirst()
+                        .orElse(null);
+        boolean completa = asesoria.getEstado() == EstadoAsesoria.EVALUADA || resenas.size() >= 2;
+        Resena resenaContraparte = completa
+                ? resenas.stream()
+                        .filter(r -> viewer == null
+                                || r.getAutor() == null
+                                || !r.getAutor().getId().equals(viewer.getId()))
+                        .findFirst()
+                        .orElse(null)
+                : null;
+
+        String estadoEvaluacion;
+        if (completa) {
+            estadoEvaluacion = "COMPLETA";
+        } else if (miResena != null) {
+            estadoEvaluacion = "ESPERANDO_CONTRAPARTE";
+        } else {
+            estadoEvaluacion = "PENDIENTE";
+        }
+
         return AsesoriaResponse.builder()
                 .id(asesoria.getId())
                 .solicitudId(asesoria.getSolicitud().getId())
@@ -59,7 +88,20 @@ public class TutorialMapper {
                 .confirmadaEstudiante(asesoria.getConfirmacionEstudianteAt() != null)
                 .confirmadaTutor(asesoria.getConfirmacionTutorAt() != null)
                 .finalizadaAt(asesoria.getFinalizadaAt())
+                .estadoEvaluacion(estadoEvaluacion)
+                .miResena(miResena == null ? null : toResenaResponse(miResena))
+                .resenaContraparte(resenaContraparte == null ? null : toResenaResponse(resenaContraparte))
                 .createdAt(asesoria.getCreatedAt())
+                .build();
+    }
+
+    private ResenaResponse toResenaResponse(Resena resena) {
+        return ResenaResponse.builder()
+                .id(resena.getId())
+                .rolAutor(resena.getRolAutor().name())
+                .rating(resena.getRating())
+                .comentario(resena.getComentario())
+                .createdAt(resena.getCreatedAt())
                 .build();
     }
 

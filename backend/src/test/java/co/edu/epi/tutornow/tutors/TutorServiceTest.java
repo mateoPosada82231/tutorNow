@@ -10,6 +10,7 @@ import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutors.model.TutorSlot;
 import co.edu.epi.tutornow.tutors.model.DiaSemana;
+import co.edu.epi.tutornow.tutors.port.TutorResenasPort;
 import co.edu.epi.tutornow.tutors.repository.TutorRepository;
 import co.edu.epi.tutornow.tutors.repository.TutorSlotRepository;
 import co.edu.epi.tutornow.tutors.service.TutorService;
@@ -55,6 +56,9 @@ class TutorServiceTest {
 
     @Mock
     private MateriaRepository materiaRepository;
+
+    @Mock
+    private TutorResenasPort tutorResenasPort;
 
     @InjectMocks
     private TutorService tutorService;
@@ -221,6 +225,8 @@ class TutorServiceTest {
                             .diaSemana(DiaSemana.MIERCOLES).horaInicio(LocalTime.of(14, 0)).build(),
                     TutorSlot.builder().id(21L).tutor(tutor)
                             .diaSemana(DiaSemana.LUNES).horaInicio(LocalTime.of(10, 0)).build()));
+            when(tutorResenasPort.obtenerResenas(10L))
+                    .thenReturn(new TutorResenasPort.TutorResenasResumen(null, 0, List.of()));
 
             TutorProfileResponse response = tutorService.getTutorProfile(10L);
 

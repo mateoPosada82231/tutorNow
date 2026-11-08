@@ -57,6 +57,10 @@ public class SolicitudService {
         if (usuario.getRol() == Rol.ADMIN) {
             throw new ForbiddenException("Los administradores no pueden publicar asesorias");
         }
+        if (asesoriaRepository.existsPendienteDeResena(usuario.getId(), EstadoAsesoria.FINALIZADA)) {
+            throw new ConflictException(
+                    "Debes calificar tus asesorias finalizadas antes de publicar una nueva solicitud");
+        }
         Materia materia = materiaRepository.findById(request.getMateriaId())
                 .filter(Materia::isActiva)
                 .orElseThrow(() -> new ConflictException("La materia no existe o no esta activa"));
@@ -151,7 +155,7 @@ public class SolicitudService {
                             conteos.getOrDefault(s.getId(), 0L),
                             List.of(),
                             esTutor ? materiasTutorFinal.contains(s.getMateria().getId()) : null,
-                            asesoriaDelViewer ? mapper.toAsesoriaResponse(asesoria) : null);
+                            asesoriaDelViewer ? mapper.toAsesoriaResponse(asesoria, usuario) : null);
                 })
                 .toList();
 
@@ -195,7 +199,7 @@ public class SolicitudService {
                         conteos.getOrDefault(a.getSolicitud().getId(), 0L),
                         List.of(),
                         null,
-                        mapper.toAsesoriaResponse(a)))
+                        mapper.toAsesoriaResponse(a, usuario)))
                 .toList();
 
         return PageResponse.<TutoringRequestResponse>builder()
@@ -220,7 +224,7 @@ public class SolicitudService {
                 : null;
         return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas,
                 profileMatch(usuario, solicitud),
-                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria));
+                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria, usuario));
     }
 
     @Transactional(readOnly = true)
@@ -264,7 +268,7 @@ public class SolicitudService {
 
         List<ProposalResponse> propuestas = loadPropuestas(usuario, solicitud);
         return mapper.toSolicitudResponse(usuario, solicitud, propuestas.size(), propuestas, null,
-                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria));
+                asesoria == null ? null : mapper.toAsesoriaResponse(asesoria, usuario));
     }
 
     private List<ProposalResponse> loadPropuestas(Usuario viewer, SolicitudAsesoria solicitud) {

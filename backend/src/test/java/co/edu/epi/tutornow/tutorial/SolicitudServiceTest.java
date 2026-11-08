@@ -172,6 +172,22 @@ class SolicitudServiceTest {
         }
 
         @Test
+        @DisplayName("Bloquea la publicacion cuando hay resenas pendientes")
+        void bloqueaConResenasPendientes() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(asesoriaRepository.existsPendienteDeResena(estudiante.getId(), EstadoAsesoria.FINALIZADA))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() -> solicitudService.create(estudiante.getCorreoElectronico(),
+                    CreateTutoringRequest.builder().materiaId(1L).tema("Tema valido aqui")
+                            .modalidad("VIRTUAL").disponibilidad("Sabados manana").build()))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("calificar");
+            verify(solicitudRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("Falla si la materia no existe o esta inactiva")
         void materiaInactiva() {
             when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))

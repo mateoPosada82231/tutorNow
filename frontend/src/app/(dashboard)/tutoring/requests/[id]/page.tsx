@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { AsesoriaActions } from '@/features/tutoring/components/AsesoriaActions';
+import { AsesoriaReviewForm } from '@/features/tutoring/components/AsesoriaReviewForm';
+import { AsesoriaReviewList } from '@/features/tutoring/components/AsesoriaReviewList';
 import { ProposalCard } from '@/features/tutoring/components/ProposalCard';
 import {
   acceptProposal,
@@ -365,6 +367,20 @@ function TutoringRequestDetailContent() {
           <AsesoriaActions request={request} onUpdated={loadRequest} />
         </section>
       )}
+
+      {request.asesoria &&
+        (request.asesoria.estado === 'FINALIZADA' || request.asesoria.estado === 'EVALUADA') && (
+          <section aria-label="Evaluación de la asesoría">
+            {request.asesoria.estado === 'FINALIZADA' && !request.asesoria.miResena ? (
+              <AsesoriaReviewForm
+                asesoriaId={request.asesoria.id}
+                onSubmitted={loadRequest}
+              />
+            ) : (
+              <AsesoriaReviewList asesoria={request.asesoria} />
+            )}
+          </section>
+        )}
 
       {acceptsProposals && (
         <section aria-label="Propuestas recibidas" className="flex flex-col gap-4">

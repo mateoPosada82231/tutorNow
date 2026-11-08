@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useRequireAuth } from './useRequireAuth';
 import { HttpError } from '@/lib/httpClient';
@@ -54,6 +54,29 @@ describe('useRequireAuth', () => {
     expect(replaceMock).not.toHaveBeenCalled();
     expect(fetchMyProfileMock).toHaveBeenCalled();
     expect(useAuthStore.getState().user?.role).toBe('TUTOR');
+  });
+
+  it('deshabilita el dashboard al cerrar sesion', async () => {
+    useAuthStore.setState(sesionValida);
+    fetchMyProfileMock.mockResolvedValue({
+      id: 1,
+      email: 'ana@elpoli.edu.co',
+      fullName: 'Ana Perez',
+      role: 'ESTUDIANTE',
+      carrera: null,
+      semestre: null,
+      isTutor: false,
+    });
+
+    const { result } = renderHook(() => useRequireAuth());
+
+    await waitFor(() => expect(result.current).toBe(true));
+
+    act(() => {
+      useAuthStore.getState().logout();
+    });
+
+    await waitFor(() => expect(result.current).toBe(false));
   });
 
   it('cierra la sesion y redirige a login cuando el token ya no es valido', async () => {

@@ -36,6 +36,9 @@ export function HistoryCard({ request, detailHref }: HistoryCardProps) {
     ? (asesoria?.tutor.fullName ?? 'Sin tutor asignado')
     : request.estudiante.fullName;
   const fechaFinalizacion = formatFecha(asesoria?.finalizadaAt ?? null);
+  const miResena = asesoria?.miResena ?? null;
+  const pendientePorCalificar = asesoria?.estado === 'FINALIZADA' && !miResena;
+  const esperandoContraparte = asesoria?.estado === 'FINALIZADA' && miResena != null;
 
   let resumen = '';
   if (asesoria?.estado === 'EVALUADA') {
@@ -83,6 +86,24 @@ export function HistoryCard({ request, detailHref }: HistoryCardProps) {
             <CalendarCheck2 className="h-4 w-4 shrink-0 text-text-muted" aria-hidden="true" />
           )}
           {resumen}
+        </p>
+      )}
+
+      {pendientePorCalificar && (
+        <p className="rounded-lg border border-brand-poli/30 bg-brand-poli/10 p-3 text-sm text-brand-poli">
+          Pendiente por calificar.{' '}
+          <Link
+            href={detailHref ?? `/tutoring/requests/${request.id}`}
+            className="font-semibold underline focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          >
+            Calificar asesoría
+          </Link>
+        </p>
+      )}
+
+      {esperandoContraparte && (
+        <p className="rounded-lg border border-dashed border-border-color bg-bg-primary p-3 text-sm text-text-muted">
+          Tu reseña está guardada. Esperando la reseña de la otra parte.
         </p>
       )}
 

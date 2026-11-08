@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TutoringRequestsPage from './page';
 import * as tutoringApi from '@/features/tutoring/api/tutoringApi';
@@ -103,6 +103,26 @@ describe('TutoringRequestsPage', () => {
     );
     expect(screen.queryByRole('link', { name: /por aceptar/i })).not.toBeInTheDocument();
     await waitFor(() => expect(tutoringApi.fetchAcceptedTutoringRequests).toHaveBeenCalled());
+  });
+
+  it('no falla al cerrar sesion desde la vista de tutor', async () => {
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 3, email: 'tutor@elpoli.edu.co', fullName: 'Carlos Gomez', role: 'TUTOR' },
+      isAuthenticated: true,
+    });
+    render(<TutoringRequestsPage />);
+
+    expect(await screen.findByRole('tab', { name: /como tutor/i })).toBeInTheDocument();
+
+    act(() => {
+      useAuthStore.getState().logout();
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: /como tutor/i })).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('heading', { level: 1, name: /mis asesorias/i })).not.toBeInTheDocument();
   });
 
   it('muestra el estado vacio propio cuando el estudiante no ha publicado', async () => {
@@ -221,6 +241,40 @@ describe('TutoringRequestsPage', () => {
       expect(tutoringApi.fetchTutoringRequests).toHaveBeenCalledWith(
         expect.objectContaining({ vista: 'historial', size: 20 }),
       ),
+    );
+  });
+
+  it('recarga los datos al cambiar de vista sin desmontar', async () => {
+    searchParamsMock.current = new URLSearchParams();
+    vi.mocked(tutoringApi.fetchTutoringRequests).mockResolvedValue({
+      data: [buildRequest()],
+      pagination: { page: 0, size: 20, totalElements: 1, totalPages: 1 },
+    });
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 2, email: 'ana@elpoli.edu.co', fullName: 'Ana Perez', role: 'ESTUDIANTE' },
+      isAuthenticated: true,
+    });
+
+    const { rerender: rerenderPage } = render(<TutoringRequestsPage />);
+
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ vista: 'abiertas', size: 20 }),
+      ),
+    );
+
+    searchParamsMock.current = new URLSearchParams({ vista: 'historial' });
+    rerenderPage(<TutoringRequestsPage />);
+
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ vista: 'historial', size: 20 }),
+      ),
+    );
+    expect(screen.getByRole('link', { name: /historial/i })).toHaveAttribute(
+      'aria-current',
+      'page',
     );
   });
 });

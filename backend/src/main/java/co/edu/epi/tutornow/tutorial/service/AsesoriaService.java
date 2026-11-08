@@ -52,6 +52,6 @@ public class AsesoriaService {
             asesoria.setFinalizadaAt(now);
         }
         asesoriaRepository.save(asesoria);
-        return mapper.toAsesoriaResponse(asesoria);
+        return mapper.toAsesoriaResponse(asesoria, usuario);
     }
 }

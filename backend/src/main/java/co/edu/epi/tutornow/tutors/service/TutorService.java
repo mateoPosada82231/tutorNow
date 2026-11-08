@@ -11,6 +11,7 @@ import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotResponse;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutors.model.TutorSlot;
+import co.edu.epi.tutornow.tutors.port.TutorResenasPort;
 import co.edu.epi.tutornow.tutors.repository.TutorRepository;
 import co.edu.epi.tutornow.tutors.repository.TutorSlotRepository;
 import co.edu.epi.tutornow.users.model.Rol;
@@ -33,6 +34,7 @@ public class TutorService {
     private final TutorSlotRepository tutorSlotRepository;
     private final UsuarioRepository usuarioRepository;
     private final MateriaRepository materiaRepository;
+    private final TutorResenasPort tutorResenasPort;
 
     @Transactional
     public TutorResponse becomeTutor(String correo, TutorProfileRequest request) {
@@ -133,13 +135,18 @@ public class TutorService {
                         .build())
                 .toList();
 
+        TutorResenasPort.TutorResenasResumen resenas =
+                tutorResenasPort.obtenerResenas(tutor.getId());
+
         return TutorProfileResponse.builder()
                 .id(tutor.getId())
                 .fullName(tutor.getUsuario().getNombreCompleto())
                 .biografia(tutor.getBiografia())
                 .materias(mapMaterias(tutor))
                 .disponibilidad(disponibilidad)
-                .resenas(List.of())
+                .promedioRating(resenas.promedioRating())
+                .totalResenas(resenas.totalResenas())
+                .resenas(resenas.resenas())
                 .build();
     }
 }
