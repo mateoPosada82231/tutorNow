@@ -243,4 +243,38 @@ describe('TutoringRequestsPage', () => {
       ),
     );
   });
+
+  it('recarga los datos al cambiar de vista sin desmontar', async () => {
+    searchParamsMock.current = new URLSearchParams();
+    vi.mocked(tutoringApi.fetchTutoringRequests).mockResolvedValue({
+      data: [buildRequest()],
+      pagination: { page: 0, size: 20, totalElements: 1, totalPages: 1 },
+    });
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 2, email: 'ana@elpoli.edu.co', fullName: 'Ana Perez', role: 'ESTUDIANTE' },
+      isAuthenticated: true,
+    });
+
+    const { rerender: rerenderPage } = render(<TutoringRequestsPage />);
+
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ vista: 'abiertas', size: 20 }),
+      ),
+    );
+
+    searchParamsMock.current = new URLSearchParams({ vista: 'historial' });
+    rerenderPage(<TutoringRequestsPage />);
+
+    await waitFor(() =>
+      expect(tutoringApi.fetchTutoringRequests).toHaveBeenLastCalledWith(
+        expect.objectContaining({ vista: 'historial', size: 20 }),
+      ),
+    );
+    expect(screen.getByRole('link', { name: /historial/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
 });

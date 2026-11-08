@@ -137,7 +137,6 @@ function TutorRequestsView({ vista: tutorVista, materias }: RequestsViewProps) {
   const [estudianteLoading, setEstudianteLoading] = useState(true);
   const [estudianteError, setEstudianteError] = useState<string | null>(null);
   const [estudianteFilters, setEstudianteFilters] = useState<TutoringRequestFilters>({
-    vista: tutorVista,
     page: 0,
     size: 20,
   });
@@ -146,7 +145,10 @@ function TutorRequestsView({ vista: tutorVista, materias }: RequestsViewProps) {
     setEstudianteLoading(true);
     setEstudianteError(null);
     try {
-      const page = await fetchTutoringRequests(estudianteFilters);
+      const page = await fetchTutoringRequests({
+        ...estudianteFilters,
+        vista: tutorVista,
+      });
       setEstudianteRequests(page.data);
     } catch (err) {
       setEstudianteError(
@@ -157,7 +159,7 @@ function TutorRequestsView({ vista: tutorVista, materias }: RequestsViewProps) {
     } finally {
       setEstudianteLoading(false);
     }
-  }, [estudianteFilters]);
+  }, [estudianteFilters, tutorVista]);
 
   useEffect(() => {
     void loadEstudianteRequests();
@@ -318,7 +320,7 @@ function TutorRequestsView({ vista: tutorVista, materias }: RequestsViewProps) {
               </div>
               {estudianteHasActiveFilters && (
                 <button
-                  onClick={() => setEstudianteFilters((p) => ({ ...p, vista: tutorVista, page: 0, size: 20 }))}
+                  onClick={() => setEstudianteFilters((p) => ({ ...p, page: 0, size: 20 }))}
                   className="inline-flex items-center gap-1 min-h-[44px] self-end px-4 py-2 text-sm font-medium text-text-muted hover:text-brand-poli transition-colors"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
@@ -410,7 +412,6 @@ function StudentRequestsView({ vista, materias }: RequestsViewProps) {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filters, setFilters] = useState<TutoringRequestFilters>({
-    vista,
     page: 0,
     size: 20,
   });
@@ -419,7 +420,10 @@ function StudentRequestsView({ vista, materias }: RequestsViewProps) {
     setLoading(true);
     setLoadError(null);
     try {
-      const page = await fetchTutoringRequests(filters);
+      const page = await fetchTutoringRequests({
+        ...filters,
+        vista,
+      });
       setRequests(page.data);
     } catch (err) {
       setLoadError(
@@ -430,7 +434,7 @@ function StudentRequestsView({ vista, materias }: RequestsViewProps) {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, vista]);
 
   useEffect(() => {
     void loadRequests();
@@ -508,7 +512,7 @@ function StudentRequestsView({ vista, materias }: RequestsViewProps) {
           </div>
           {hasActiveFilters && (
             <button
-              onClick={() => setFilters({ vista, page: 0, size: 20 })}
+              onClick={() => setFilters({ page: 0, size: 20 })}
               className="inline-flex items-center gap-1 min-h-[44px] self-end px-4 py-2 text-sm font-medium text-text-muted hover:text-brand-poli transition-colors"
             >
               <X className="h-4 w-4" aria-hidden="true" />
