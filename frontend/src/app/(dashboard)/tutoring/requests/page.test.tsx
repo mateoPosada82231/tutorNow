@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TutoringRequestsPage from './page';
 import * as tutoringApi from '@/features/tutoring/api/tutoringApi';
@@ -103,6 +103,26 @@ describe('TutoringRequestsPage', () => {
     );
     expect(screen.queryByRole('link', { name: /por aceptar/i })).not.toBeInTheDocument();
     await waitFor(() => expect(tutoringApi.fetchAcceptedTutoringRequests).toHaveBeenCalled());
+  });
+
+  it('no falla al cerrar sesion desde la vista de tutor', async () => {
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 3, email: 'tutor@elpoli.edu.co', fullName: 'Carlos Gomez', role: 'TUTOR' },
+      isAuthenticated: true,
+    });
+    render(<TutoringRequestsPage />);
+
+    expect(await screen.findByRole('tab', { name: /como tutor/i })).toBeInTheDocument();
+
+    act(() => {
+      useAuthStore.getState().logout();
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByRole('tab', { name: /como tutor/i })).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByRole('heading', { level: 1, name: /mis asesorias/i })).not.toBeInTheDocument();
   });
 
   it('muestra el estado vacio propio cuando el estudiante no ha publicado', async () => {

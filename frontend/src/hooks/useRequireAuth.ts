@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export function useRequireAuth() {
   const router = useRouter();
+  const token = useAuthStore((state) => state.token);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function resolveSession() {
-      const { useAuthStore } = await import('@/stores/useAuthStore');
       const { token } = useAuthStore.getState();
 
       if (!token) {
@@ -48,6 +49,10 @@ export function useRequireAuth() {
       cancelled = true;
     };
   }, [router]);
+
+  if (!token) {
+    return false;
+  }
 
   return ready;
 }
