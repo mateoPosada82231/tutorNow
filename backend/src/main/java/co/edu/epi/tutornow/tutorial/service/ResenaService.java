@@ -10,6 +10,7 @@ import co.edu.epi.tutornow.tutorial.dto.ResenaRecibidaResponse;
 import co.edu.epi.tutornow.tutorial.dto.ResenaRequest;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
 import co.edu.epi.tutornow.tutorial.model.Resena;
 import co.edu.epi.tutornow.tutorial.model.RolAutorResena;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
@@ -72,7 +73,9 @@ public class ResenaService {
         resenaRepository.save(resena);
 
         asesoria.getResenas().add(resena);
-        if (asesoria.getResenas().size() >= 2) {
+        long resenasVisibles = resenaRepository.countByAsesoriaIdAndEstadoModeracion(
+                asesoria.getId(), EstadoModeracion.VISIBLE);
+        if (resenasVisibles >= 2) {
             asesoria.setEstado(EstadoAsesoria.EVALUADA);
             asesoriaRepository.save(asesoria);
         }

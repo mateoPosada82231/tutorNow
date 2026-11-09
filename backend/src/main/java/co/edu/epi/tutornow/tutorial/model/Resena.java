@@ -58,6 +58,11 @@ public class Resena {
     @Column(name = "comentario", nullable = false, length = 500)
     private String comentario;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_moderacion", nullable = false, length = 20)
+    private EstadoModeracion estadoModeracion = EstadoModeracion.VISIBLE;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
