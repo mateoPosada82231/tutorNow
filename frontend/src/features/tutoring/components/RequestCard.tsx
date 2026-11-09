@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ReportButton } from '@/features/reports';
 import type { TutoringRequest } from '../types';
 import { estadoCiclo } from '../lib/estadoCiclo';
 
@@ -56,13 +57,16 @@ export function RequestCard({ request }: RequestCardProps) {
             ? '1 propuesta'
             : `${request.propuestasCount} propuestas`}
         </span>
-        <Link
-          href={`/tutoring/requests/${request.id}`}
-          className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
-        >
-          Ver detalle
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </Link>
+        <div className="flex items-center gap-1">
+          <ReportButton tipo="PUBLICACION" targetId={request.id} />
+          <Link
+            href={`/tutoring/requests/${request.id}`}
+            className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-sm font-semibold text-brand-poli transition-colors duration-200 hover:bg-brand-poli/10 focus:outline-none focus:ring-2 focus:ring-brand-poli"
+          >
+            Ver detalle
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </article>
   );
