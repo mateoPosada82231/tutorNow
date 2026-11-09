@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, CalendarClock, MessageCircle, Trash2, User } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Trash2, User } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
@@ -92,7 +92,6 @@ function TutoringRequestDetailContent() {
   const [decidingId, setDecidingId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [chatNotice, setChatNotice] = useState(false);
 
   const loadRequest = useCallback(async () => {
     setLoading(true);
@@ -251,7 +250,6 @@ function TutoringRequestDetailContent() {
   );
   const canCancel =
     isOwner && (request.estado === 'PUBLICADA' || request.estado === 'EN_PROCESO');
-  const chatEnabled = request.estado === 'CONFIRMADA';
   const ciclo = estadoCiclo(request);
 
   return (
@@ -302,22 +300,7 @@ function TutoringRequestDetailContent() {
           )}
         </dl>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-border-color pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button
-            type="button"
-            disabled={!chatEnabled}
-            onClick={() => setChatNotice(true)}
-            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand-poli px-4 py-2 text-base font-semibold text-white transition-colors duration-200 hover:bg-brand-poli-hover focus:outline-none focus:ring-2 focus:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden="true" />
-            Entrar al chat
-            {chatEnabled && (
-              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">
-                Proximamente
-              </span>
-            )}
-          </button>
-
+        <div className="mt-6 flex flex-col gap-3 border-border-color pt-4 sm:flex-row sm:items-center sm:justify-between">
           {canCancel && (
             <button
               type="button"
@@ -334,12 +317,6 @@ function TutoringRequestDetailContent() {
             </button>
           )}
         </div>
-
-        {chatNotice && chatEnabled && (
-          <div className="mt-4">
-            <Alert type="info">El chat estara disponible proximamente</Alert>
-          </div>
-        )}
       </section>
 
       {actionError ? <Alert type="error">{actionError}</Alert> : null}

@@ -67,17 +67,22 @@ describe('TutoringRequestDetailPage', () => {
     });
   });
 
-  it('deshabilita el chat hasta que la asesoria este confirmada', async () => {
+  it('no muestra el acceso al chat en una asesoria que aun no esta confirmada', async () => {
     vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
       buildRequest({ estado: 'EN_PROCESO' }),
     );
     render(<TutoringRequestDetailPage />);
 
-    const chatButton = await screen.findByRole('button', { name: /entrar al chat/i });
-    expect(chatButton).toBeDisabled();
+    expect(await screen.findByRole('heading', { name: /ecuaciones diferenciales/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /entrar al chat/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/el chat estara disponible proximamente/i),
+    ).not.toBeInTheDocument();
   });
 
-  it('habilita el chat en asesorias confirmadas y muestra el aviso al hacer clic', async () => {    const user = userEvent.setup();
+  it('no muestra el acceso al chat en una asesoria confirmada', async () => {
     vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(
       buildRequest({
         estado: 'CONFIRMADA',
@@ -102,13 +107,13 @@ describe('TutoringRequestDetailPage', () => {
     );
     render(<TutoringRequestDetailPage />);
 
-    const chatButton = await screen.findByRole('button', { name: /entrar al chat/i });
-    expect(chatButton).toBeEnabled();
-
-    await user.click(chatButton);
+    expect(await screen.findByRole('heading', { name: /ecuaciones diferenciales/i })).toBeInTheDocument();
     expect(
-      await screen.findByText(/el chat estara disponible proximamente/i),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: /entrar al chat/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/el chat estara disponible proximamente/i),
+    ).not.toBeInTheDocument();
   });
 
   it('muestra el badge de la asesoria creada en estado pendiente al confirmar', async () => {
