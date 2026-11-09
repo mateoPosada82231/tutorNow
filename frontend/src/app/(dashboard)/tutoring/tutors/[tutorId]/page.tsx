@@ -9,6 +9,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { AvailabilityGrid, slotKeyFromHoraInicio } from '@/features/schedule';
 import { TutorRatingSummary } from '@/features/tutoring/components/TutorRatingSummary';
 import { StarRating } from '@/features/tutoring/components/StarRating';
+import { ReportButton } from '@/features/reports';
 import {
   acceptProposal,
   fetchTutorProfile,
@@ -243,6 +244,7 @@ function TutorProfileContent() {
                     <StarRating rating={resena.rating} />
                     <span className="text-xs font-semibold">{resena.rating}/5</span>
                     <span className="ml-auto text-xs text-text-muted">Reseña anónima</span>
+                    <ReportButton tipo="RESENA" targetId={resena.id} />
                   </div>
                   <p className="mt-2">{resena.comentario}</p>
                 </li>

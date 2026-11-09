@@ -9,6 +9,7 @@ import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
 import co.edu.epi.tutornow.tutorial.dto.UserBriefResponse;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.Resena;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
@@ -53,7 +54,11 @@ public class TutorialMapper {
     }
 
     public AsesoriaResponse toAsesoriaResponse(Asesoria asesoria, Usuario viewer) {
-        List<Resena> resenas = asesoria.getResenas() == null ? List.of() : asesoria.getResenas();
+        List<Resena> resenas = asesoria.getResenas() == null
+                ? List.of()
+                : asesoria.getResenas().stream()
+                        .filter(r -> r.getEstadoModeracion() == EstadoModeracion.VISIBLE)
+                        .toList();
         Resena miResena = viewer == null
                 ? null
                 : resenas.stream()

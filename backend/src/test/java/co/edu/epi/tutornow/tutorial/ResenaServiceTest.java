@@ -8,6 +8,7 @@ import co.edu.epi.tutornow.tutorial.dto.MisResenasResponse;
 import co.edu.epi.tutornow.tutorial.dto.ResenaRequest;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
@@ -127,6 +128,8 @@ class ResenaServiceTest {
                     .thenReturn(Optional.of(tutorUsuario));
             when(asesoriaRepository.findByIdConParticipantesForUpdate(20L)).thenReturn(Optional.of(asesoria));
             when(resenaRepository.existsByAsesoriaIdAndAutorId(20L, 2L)).thenReturn(false);
+            when(resenaRepository.countByAsesoriaIdAndEstadoModeracion(20L, EstadoModeracion.VISIBLE))
+                    .thenReturn(2L);
             when(resenaRepository.save(any(Resena.class))).thenAnswer(inv -> {
                 Resena r = inv.getArgument(0);
                 r.setId(101L);

@@ -10,6 +10,7 @@ import co.edu.epi.tutornow.tutorial.dto.CreateTutoringRequest;
 import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
@@ -339,6 +340,7 @@ public class SolicitudService {
 
     private SolicitudAsesoria findSolicitud(Long id) {
         return solicitudRepository.findById(id)
+                .filter(s -> s.getEstadoModeracion() != EstadoModeracion.RETIRADA)
                 .orElseThrow(() -> new ResourceNotFoundException("Asesoria no encontrada"));
     }
 

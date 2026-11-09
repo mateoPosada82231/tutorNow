@@ -131,6 +131,29 @@ describe('Navbar', () => {
     expect(within(drawer).queryByRole('link', { name: /panel del tutor/i })).not.toBeInTheDocument();
   });
 
+  it('muestra el enlace al panel de administracion cuando el usuario es admin', async () => {
+    useAuthStore.setState({
+      token: 'token',
+      user: { id: 3, email: 'admin@elpoli.edu.co', fullName: 'Admin User', role: 'ADMIN' },
+      isAuthenticated: true,
+    });
+    const user = userEvent.setup();
+    render(<Navbar />);
+
+    await user.click(screen.getByTestId('user-menu-button'));
+
+    expect(await screen.findByRole('menuitem', { name: /panel de administracion/i })).toHaveAttribute(
+      'href',
+      '/admin/users',
+    );
+  });
+
+  it('oculta el panel de administracion a los estudiantes', () => {
+    render(<Navbar />);
+
+    expect(screen.queryByRole('menuitem', { name: /panel de administracion/i })).not.toBeInTheDocument();
+  });
+
   it('muestra el panel del tutor en el menu de usuario cuando el usuario es tutor', async () => {
     useAuthStore.setState({
       token: 'token',

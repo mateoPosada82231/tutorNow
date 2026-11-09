@@ -1,6 +1,7 @@
 package co.edu.epi.tutornow.tutorial.repository;
 
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
@@ -20,6 +21,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
     @Query("""
             SELECT s FROM SolicitudAsesoria s
             WHERE (:estudianteId IS NULL OR s.estudiante.id = :estudianteId)
+              AND s.estadoModeracion = 'VISIBLE'
               AND (:materiaId IS NULL OR s.materia.id = :materiaId)
               AND (:modalidad IS NULL OR s.modalidad = :modalidad)
               AND (:estado IS NULL OR s.estado = :estado)
@@ -45,7 +47,8 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
 
     @Query("""
             SELECT s FROM SolicitudAsesoria s
-            WHERE (:materiaId IS NULL OR s.materia.id = :materiaId)
+            WHERE s.estadoModeracion = 'VISIBLE'
+              AND (:materiaId IS NULL OR s.materia.id = :materiaId)
               AND (:modalidad IS NULL OR s.modalidad = :modalidad)
               AND (:estado IS NULL OR s.estado = :estado)
               AND (:q IS NULL OR LOWER(s.tema) LIKE :q OR LOWER(s.materia.nombre) LIKE :q)
@@ -71,6 +74,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
     @Query("""
             SELECT s FROM SolicitudAsesoria s
             WHERE s.estudiante.id = :estudianteId
+              AND s.estadoModeracion = 'VISIBLE'
               AND s.estado <> :estadoCancelada
               AND NOT EXISTS (
                   SELECT a FROM Asesoria a
@@ -91,6 +95,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
     @Query("""
             SELECT s FROM SolicitudAsesoria s
             WHERE s.estudiante.id = :estudianteId
+              AND s.estadoModeracion = 'VISIBLE'
               AND EXISTS (
                   SELECT a FROM Asesoria a
                   WHERE a.solicitud.id = s.id
@@ -109,6 +114,7 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
     @Query("""
             SELECT s FROM SolicitudAsesoria s
             WHERE s.estudiante.id = :estudianteId
+              AND s.estadoModeracion = 'VISIBLE'
               AND (s.estado = :estadoCancelada
                    OR EXISTS (
                        SELECT a FROM Asesoria a
@@ -124,5 +130,18 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             @Param("estadosAsesoria") Collection<EstadoAsesoria> estadosAsesoria,
             @Param("materiaId") Long materiaId,
             @Param("modalidad") Modalidad modalidad,
+            Pageable pageable);
+
+    @Query("""
+            SELECT s FROM SolicitudAsesoria s
+            WHERE (:estado IS NULL OR s.estado = :estado)
+              AND (:moderacion IS NULL OR s.estadoModeracion = :moderacion)
+              AND (:q IS NULL OR LOWER(s.tema) LIKE :q OR LOWER(s.materia.nombre) LIKE :q)
+            ORDER BY s.createdAt DESC
+            """)
+    Page<SolicitudAsesoria> findAdminFiltered(
+            @Param("estado") EstadoSolicitud estado,
+            @Param("moderacion") EstadoModeracion moderacion,
+            @Param("q") String q,
             Pageable pageable);
 }
