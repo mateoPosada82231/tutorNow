@@ -206,8 +206,11 @@ public class ReportService {
                 .motivo(reporte.getMotivo())
                 .descripcion(reporte.getDescripcion())
                 .estado(reporte.getEstado().name())
+                .reportador(reporte.getReportador() == null ? null : reportadorResponse(reporte))
                 .resolucion(reporte.getResolucion())
                 .resueltoAt(reporte.getResueltoAt())
+                .resueltoPor(reporte.getResueltoPor() == null ? null : resueltoPorResponse(reporte))
+                .createdAt(reporte.getCreatedAt())
                 .target(resolverTarget(reporte))
                 .build();
     }
