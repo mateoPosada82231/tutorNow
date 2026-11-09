@@ -284,7 +284,8 @@ function ReportDetailModal({ reportId, onClose, onChanged }: ReportDetailModalPr
                 </p>
               ) : null}
               <p className="text-text-muted">
-                Reportado por {detail.reportador.fullName} ({detail.reportador.email}) &middot;{' '}
+                Reportado por {detail.reportador?.fullName ?? 'Usuario no disponible'}
+                {detail.reportador?.email ? ` (${detail.reportador.email})` : ''} &middot;{' '}
                 {formatFecha(detail.createdAt)}
               </p>
               {detail.resolucion ? (

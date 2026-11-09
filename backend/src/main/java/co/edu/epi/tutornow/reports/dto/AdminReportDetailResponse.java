@@ -17,8 +17,11 @@ public class AdminReportDetailResponse {
     private String motivo;
     private String descripcion;
     private String estado;
+    private AdminReportResponse.ReportadorResponse reportador;
     private String resolucion;
     private OffsetDateTime resueltoAt;
+    private AdminReportResponse.ReportadorResponse resueltoPor;
+    private OffsetDateTime createdAt;
     private AdminReportTargetResponse target;
 
     @Getter
