@@ -18,6 +18,7 @@ import {
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useChatUnreadSync } from "@/features/chat/hooks/useChatUnreadSync";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { Flag } from "lucide-react";
 
 function initialsOf(fullName: string | undefined): string {
   if (!fullName) return "?";
@@ -50,6 +51,7 @@ export function Navbar() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
   const isTutor = user?.role === "TUTOR";
+  const isAdmin = user?.role === "ADMIN";
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -91,11 +93,13 @@ export function Navbar() {
     { href: "/tutoring/requests", icon: MessageSquare, label: "Mis asesorías" },
     ...(isTutor ? [{ href: "/tutoring/explore", icon: BookOpenCheck, label: "Explorar asesorías" }] : []),
     { href: "/tutoring/chats", icon: MessageSquare, label: "Chats" },
+    ...(isAdmin ? [{ href: "/admin/users", icon: Flag, label: "Panel admin" }] : []),
   ];
 
   const userItems: NavItem[] = [
     { href: "/profile", icon: User, label: "Mi perfil" },
     ...(isTutor ? [{ href: "/tutoring", icon: BookOpenCheck, label: "Panel del tutor" }] : []),
+    ...(isAdmin ? [{ href: "/admin/users", icon: Flag, label: "Panel de administracion" }] : []),
     { href: "/dev/inbox", icon: Inbox, label: "Bandeja de entrada" },
     { href: "/settings/password", icon: KeyRound, label: "Cambiar contraseña" },
     { action: handleLogout, icon: LogOut, label: "Cerrar sesión", danger: true },
