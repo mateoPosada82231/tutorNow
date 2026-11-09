@@ -9,6 +9,7 @@ import co.edu.epi.tutornow.tutorial.dto.ProposalResponse;
 import co.edu.epi.tutornow.tutorial.dto.TutoringRequestResponse;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
+import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
 import co.edu.epi.tutornow.tutorial.model.EstadoPropuesta;
 import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
@@ -77,6 +78,7 @@ public class PropuestaService {
     public TutoringRequestResponse accept(String correo, Long propuestaId) {
         Propuesta propuesta = findPropuesta(propuestaId);
         SolicitudAsesoria solicitud = propuesta.getSolicitud();
+        verificarVisible(solicitud);
         if (!solicitud.getEstudiante().getCorreoElectronico().equals(correo)) {
             throw new ForbiddenException("Solo el estudiante que publico la asesoria puede aceptar propuestas");
         }
@@ -125,6 +127,7 @@ public class PropuestaService {
     public ProposalResponse reject(String correo, Long propuestaId) {
         Propuesta propuesta = findPropuesta(propuestaId);
         SolicitudAsesoria solicitud = propuesta.getSolicitud();
+        verificarVisible(solicitud);
         boolean owner = solicitud.getEstudiante().getCorreoElectronico().equals(correo);
         boolean proponente = propuesta.getTutor().getUsuario().getCorreoElectronico().equals(correo);
         if (!owner && !proponente) {
@@ -145,11 +148,18 @@ public class PropuestaService {
 
     private SolicitudAsesoria findSolicitud(Long id) {
         return solicitudRepository.findById(id)
+                .filter(s -> s.getEstadoModeracion() != EstadoModeracion.RETIRADA)
                 .orElseThrow(() -> new ResourceNotFoundException("Asesoria no encontrada"));
     }
 
     private Propuesta findPropuesta(Long id) {
         return propuestaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Propuesta no encontrada"));
+    }
+
+    private void verificarVisible(SolicitudAsesoria solicitud) {
+        if (solicitud.getEstadoModeracion() == EstadoModeracion.RETIRADA) {
+            throw new ResourceNotFoundException("Asesoria no encontrada");
+        }
     }
 }

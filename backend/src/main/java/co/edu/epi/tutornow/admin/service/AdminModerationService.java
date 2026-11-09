@@ -65,9 +65,10 @@ public class AdminModerationService {
         if (solicitud.getEstadoModeracion() == EstadoModeracion.RETIRADA) {
             throw new ConflictException("La publicacion ya esta retirada");
         }
-        if (solicitud.getEstado() != EstadoSolicitud.PUBLICADA) {
+        if (solicitud.getEstado() != EstadoSolicitud.PUBLICADA
+                && solicitud.getEstado() != EstadoSolicitud.EN_PROCESO) {
             throw new ConflictException(
-                    "Solo se pueden retirar publicaciones abiertas; cancela la asesoria activa primero");
+                    "Solo se pueden retirar publicaciones abiertas; la asesoria ya fue confirmada o cancelada");
         }
 
         List<Propuesta> pendientes = propuestaRepository.findBySolicitudIdAndEstadoOrderByCreatedAtAsc(

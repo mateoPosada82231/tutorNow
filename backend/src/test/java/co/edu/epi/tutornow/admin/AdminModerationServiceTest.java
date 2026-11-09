@@ -107,10 +107,31 @@ class AdminModerationServiceTest {
         }
 
         @Test
-        @DisplayName("falla con 409 si la publicacion no esta abierta")
-        void shouldThrowWhenNotOpen() {
+        @DisplayName("permite retirar una publicacion en proceso y rechaza sus propuestas pendientes")
+        void shouldWithdrawPublicationInProgress() {
             SolicitudAsesoria target = solicitud();
             target.setEstado(EstadoSolicitud.EN_PROCESO);
+            Propuesta pendiente = Propuesta.builder()
+                    .id(8L).solicitud(target)
+                    .tutor(Tutor.builder().id(5L).usuario(target.getEstudiante()).build())
+                    .mensaje("Propuesta").estado(EstadoPropuesta.PENDIENTE).build();
+            when(solicitudRepository.findById(10L)).thenReturn(Optional.of(target));
+            when(propuestaRepository.findBySolicitudIdAndEstadoOrderByCreatedAtAsc(
+                    10L, EstadoPropuesta.PENDIENTE)).thenReturn(List.of(pendiente));
+            when(solicitudRepository.save(any(SolicitudAsesoria.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            AdminPublicationResponse result = adminModerationService.withdrawPublication(10L);
+
+            assertThat(result.getEstadoModeracion()).isEqualTo("RETIRADA");
+            assertThat(pendiente.getEstado()).isEqualTo(EstadoPropuesta.RECHAZADA);
+        }
+
+        @Test
+        @DisplayName("falla con 409 si la asesoria ya fue confirmada o cancelada")
+        void shouldThrowWhenNotOpen() {
+            SolicitudAsesoria target = solicitud();
+            target.setEstado(EstadoSolicitud.CONFIRMADA);
             when(solicitudRepository.findById(10L)).thenReturn(Optional.of(target));
 
             assertThatThrownBy(() -> adminModerationService.withdrawPublication(10L))

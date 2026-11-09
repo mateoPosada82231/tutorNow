@@ -152,6 +152,7 @@ interface PublicationCardProps {
 
 function PublicationCard({ publication, withdrawing, onWithdraw }: PublicationCardProps) {
   const retirada = publication.estadoModeracion === 'RETIRADA';
+  const retirable = publication.estado === 'PUBLICADA' || publication.estado === 'EN_PROCESO';
 
   return (
     <article className="flex flex-col gap-3 rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-colors duration-200 hover:border-brand-poli md:flex-row md:items-start md:justify-between md:p-5">
@@ -180,11 +181,9 @@ function PublicationCard({ publication, withdrawing, onWithdraw }: PublicationCa
           <button
             type="button"
             onClick={onWithdraw}
-            disabled={publication.estado !== 'PUBLICADA' || withdrawing}
+            disabled={!retirable || withdrawing}
             title={
-              publication.estado !== 'PUBLICADA'
-                ? 'Solo se pueden retirar publicaciones abiertas'
-                : undefined
+              retirable ? undefined : 'Solo se pueden retirar publicaciones abiertas'
             }
             className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-error px-3 py-2 text-xs font-semibold text-error transition-colors duration-200 hover:bg-error/10 focus:outline-none focus:ring-2 focus:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-50"
           >
