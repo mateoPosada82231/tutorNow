@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminPublicationsPage from './page';
 import { listAdminPublications, withdrawPublication } from '@/features/admin/api/adminApi';
+import type { AdminPublication } from '@/features/admin/types';
 
 vi.mock('@/features/admin/api/adminApi', () => ({
   listAdminPublications: vi.fn(),
@@ -12,18 +13,18 @@ vi.mock('@/features/admin/api/adminApi', () => ({
 const listAdminPublicationsMock = vi.mocked(listAdminPublications);
 const withdrawPublicationMock = vi.mocked(withdrawPublication);
 
-const publicacion = {
+const publicacion: AdminPublication = {
   id: 11,
   tema: 'Publicacion abierta',
   descripcion: 'Descripcion de la publicacion',
-  estado: 'PUBLICADA' as const,
-  estadoModeracion: 'VISIBLE' as const,
+  estado: 'PUBLICADA',
+  estadoModeracion: 'VISIBLE',
   createdAt: '2026-11-01T00:00:00Z',
   materia: { id: 1, label: 'Calculo Diferencial' },
   estudiante: { id: 4, fullName: 'Estudiante Demo', email: 'estudiante@elpoli.edu.co' },
 };
 
-function mockList(data: typeof publicacion[]) {
+function mockList(data: AdminPublication[]) {
   listAdminPublicationsMock.mockResolvedValue({
     data,
     pagination: { page: 0, size: 10, totalElements: data.length, totalPages: 1 },
