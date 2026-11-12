@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PublishRequestForm } from './PublishRequestForm';
@@ -111,6 +111,7 @@ describe('PublishRequestForm', () => {
 
     await fillValidForm(user);
     await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+    await user.click(await screen.findByRole('button', { name: /confirmar y publicar/i }));
 
     await waitFor(() => {
       expect(tutoringApi.createTutoringRequest).toHaveBeenCalledWith({
@@ -134,6 +135,7 @@ describe('PublishRequestForm', () => {
 
     await fillValidForm(user);
     await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+    await user.click(await screen.findByRole('button', { name: /confirmar y publicar/i }));
 
     expect(await screen.findByText(/ya existe una asesoria con ese tema/i)).toBeInTheDocument();
     expect(pushMock).not.toHaveBeenCalled();
@@ -148,8 +150,51 @@ describe('PublishRequestForm', () => {
 
     await fillValidForm(user);
     await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+    await user.click(await screen.findByRole('button', { name: /confirmar y publicar/i }));
 
     expect(await screen.findByText(/error interno del servidor/i)).toBeInTheDocument();
+  });
+
+  it('muestra un modal con los detalles de la asesoria antes de publicar', async () => {
+    const user = userEvent.setup();
+    render(<PublishRequestForm />);
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+
+    expect(
+      await screen.findByRole('heading', { name: /confirma los detalles de tu asesoria/i }),
+    ).toBeInTheDocument();
+    const dialogo = screen.getByRole('dialog', { name: /confirma los detalles de tu asesoria/i });
+    expect(within(dialogo).getByText('Matematicas II')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Ecuaciones diferenciales')).toBeInTheDocument();
+    expect(within(dialogo).getByText('Virtual')).toBeInTheDocument();
+    expect(
+      within(dialogo).getByText('Lunes y miercoles 2-4pm, sabados manana'),
+    ).toBeInTheDocument();
+    expect(tutoringApi.createTutoringRequest).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('cancelar la confirmacion vuelve al formulario sin publicar', async () => {
+    const user = userEvent.setup();
+    render(<PublishRequestForm />);
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+    await user.click(await screen.findByRole('button', { name: /seguir editando/i }));
+
+    expect(
+      screen.queryByRole('heading', { name: /confirma los detalles de tu asesoria/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/^tema/i)).toBeInTheDocument();
+    expect(tutoringApi.createTutoringRequest).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+    expect(
+      await screen.findByRole('heading', { name: /confirma los detalles de tu asesoria/i }),
+    ).toBeInTheDocument();
   });
 
   it('permite abrir la seleccion opcional de tutores sin enviar nada al abrir', async () => {
@@ -190,6 +235,7 @@ describe('PublishRequestForm', () => {
     expect(screen.getByText(/1 de 2 tutores seleccionados/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+    await user.click(await screen.findByRole('button', { name: /confirmar y publicar/i }));
 
     await waitFor(() => {
       expect(tutoringApi.createTutoringRequest).toHaveBeenCalledWith(

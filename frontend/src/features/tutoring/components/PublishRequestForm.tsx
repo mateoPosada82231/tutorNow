@@ -54,6 +54,8 @@ export function PublishRequestForm() {
   const [tutoresError, setTutoresError] = useState<string | null>(null);
   const [tutorIdsSeleccionados, setTutorIdsSeleccionados] = useState<number[]>([]);
 
+  const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
+
   async function loadMaterias() {
     setMateriasLoading(true);
     setMateriasError(null);
@@ -110,7 +112,7 @@ export function PublishRequestForm() {
     void loadPendientes();
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
 
@@ -132,11 +134,26 @@ export function PublishRequestForm() {
     setFieldErrors(errors);
     if (hasFieldErrors(errors)) return;
 
+    setConfirmacionAbierta(true);
+  }
+
+  async function publicar() {
+    const data = {
+      materiaId,
+      tema,
+      modalidad: modalidad as Modalidad,
+      disponibilidad,
+      descripcion: descripcion.trim() ? descripcion.trim() : undefined,
+      tutorIds: [...tutorIdsSeleccionados],
+    };
+
+    setFormError(null);
     setSubmitting(true);
     try {
       await createTutoringRequest(data);
       router.push('/tutoring/requests');
     } catch (err) {
+      setConfirmacionAbierta(false);
       if (err instanceof HttpError && err.status === 409) {
         setFormError(err.message);
         await loadPendientes();
@@ -343,6 +360,72 @@ export function PublishRequestForm() {
       <Button type="submit" disabled={submitting || materiasLoading || pendientesLoading || pendientes.length > 0}>
         {submitting ? <Spinner size="sm" /> : 'Publicar asesoria'}
       </Button>
+
+      {confirmacionAbierta ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-publicacion-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        >
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-xl border border-border-color bg-bg-surface p-6 shadow-lg">
+            <div>
+              <h2
+                id="confirm-publicacion-title"
+                className="text-lg font-semibold text-text-main"
+              >
+                Confirma los detalles de tu asesoria
+              </h2>
+              <p className="mt-1 text-sm text-text-muted">
+                Revisa que todo este correcto antes de publicarla.
+              </p>
+            </div>
+
+            <dl className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Asignatura</dt>
+                <dd className="text-right text-text-main">
+                  {materias.find((materia) => materia.id === materiaId)?.label}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Tema</dt>
+                <dd className="text-right text-text-main">{tema.trim()}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Modalidad</dt>
+                <dd className="text-right text-text-main">
+                  {modalidadOptions.find((opcion) => opcion.value === modalidad)?.label}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Disponibilidad</dt>
+                <dd className="text-right text-text-main">{disponibilidad.trim()}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Descripcion</dt>
+                <dd className="text-right text-text-main">
+                  {descripcion.trim() || 'Sin descripcion adicional'}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setConfirmacionAbierta(false)}
+                disabled={submitting}
+              >
+                Seguir editando
+              </Button>
+              <Button type="button" onClick={() => void publicar()} disabled={submitting}>
+                {submitting ? <Spinner size="sm" /> : 'Confirmar y publicar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
