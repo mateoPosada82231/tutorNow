@@ -12,7 +12,7 @@ Cita del usuario (L3): "la idea seria que muestre los slots iguales (lunes-domin
 - S1.1: En la agenda del tutor (`agenda/page.tsx` con `AvailabilityGrid`) aparece, arriba de la grilla, un selector de semana navegable con formato `‹ 9 nov - 15 nov ›` (botón anterior, rango, botón siguiente).
 - S1.2: Siempre hay exactamente 3 semanas navegables: la semana actual, la siguiente y la posterior (+1, +2). No se puede navegar antes de la semana actual ni más allá de +2.
 - S1.3: El estudiante en el perfil del tutor (`tutoring/tutors/[tutorId]/page.tsx`) ve el mismo selector y también puede navegar entre esas 3 semanas.
-- S1.4: Los slots siguen siendo recurrentes por día de la semana (lunes–domingo): el contenido de la grilla es el mismo en las 3 semanas (misma selección recurrente).
+- S1.4: Cada una de las 3 semanas muestra su propio conjunto de bloques (ya NO son recurrentes; ver S5): navegar de semana cambia el contenido de la grilla según lo guardado para esa semana.
 - S1.5: El selector está bien estilado y consistente con el diseño existente (colores/tokens del proyecto, botones con labels accesibles).
 - S1.6: `HOUR_SLOTS` sigue exponiendo 8→17 vía export existente; este feature no cambia horas de slots (otro arreglo del usuario lo pedirá aparte si hace falta).
 
@@ -23,8 +23,9 @@ Cita del usuario (L2): "añadir el feature que el estudiante al momento de crear
 - S2.2: La selección es opcional: sin selección, el comportamiento es idéntico al actual (ven la publicación los tutores según los filtros existentes).
 - S2.3: El backend guarda la audiencia de la solicitud; cuando hay audiencia, el feed del tutor solo incluye la solicitud si el tutor está en la audiencia (restricción adicional a los filtros existentes de materia, nunca los reemplaza).
 - S2.4: Hay un endpoint para listar tutores (id, nombre, materias) que el formulario usa para el selector.
-- S2.5: Tests: RED→GREEN en frontend (selector opcional, submit con/sin audiencia) y backend (persistencia de audiencia + filtrado del feed).
-- S2.6: El detalle (`GET /tutoring-requests/{id}`) y las propuestas devuelven 403 para un tutor que no está en la audiencia de una solicitud restringida.
+- S2.5: El selector de tutores incluye búsqueda por nombre (insensible a mayúsculas/minúsculas) y enlace a "Ver perfil" que abre la ficha pública del tutor en una pestaña nueva.
+- S2.6: Tests: RED→GREEN en frontend (selector opcional, submit con/sin audiencia) y backend (persistencia de audiencia + filtrado del feed).
+- S2.7: El detalle (`GET /tutoring-requests/{id}`) y las propuestas devuelven 403 para un tutor que no está en la audiencia de una solicitud restringida.
 
 ### S3 — Modal de confirmación de materias al crear perfil de tutor
 Cita del usuario (L4): "al momneto de que el tutor cree su perfil de tutor y escoja por primera vez las materias se debera mostrar un modal de confirmacion de su seleccion de matreias (todo esto pensando en el user feedback)"
@@ -41,6 +42,18 @@ Cita del usuario (L5): "tambien un modal para confirmar los detalles de la aseso
 - S4.2: `createTutoringRequest` solo se ejecuta tras confirmar; cancelar cierra el modal y permite seguir editando.
 - S4.3: Tests RED→GREEN en `PublishRequestForm.test.tsx`.
 
+### S5 — Horarios distintos por semana (modelo de datos de slots)
+Cita del usuario (L11): "hay un problema con la agenda del tutor, como se guarda en una semana se reproduce en la otra, y la idea es qu elos horarios sean distintos"
+Decisión del usuario (L11): cada semana sin horarios guardados arranca vacía — "arrancar vacia"; aplica también a las semanas +1 y +2 de tutores que ya tienen agenda cargada.
+
+- S5.1: `tutor_slots` identifica la semana: nueva columna `semana_inicio DATE NOT NULL` (lunes de la semana del slot) agregada por la migración V14; la restricción única pasa a `(tutor_id, semana_inicio, dia_semana, hora_inicio)`.
+- S5.2: La migración asigna los slots existentes a la semana actual (lunes de hoy); las semanas +1 y +2 de esos tutores arrancan vacías.
+- S5.3: `PUT /tutors/me/slots` recibe `semanaInicio` (fecha ISO `yyyy-MM-dd`, se normaliza al lunes de esa semana; si falta, la semana actual del servidor) y reemplaza SOLO los slots de esa semana sin tocar las demás semanas del tutor.
+- S5.4: `GET /tutors/me/slots` y el perfil público del tutor (`disponibilidad`) devuelven cada slot con su `semanaInicio`.
+- S5.5: La agenda del tutor edita y guarda la semana visible; navegar entre semanas muestra los bloques guardados de esa semana (vacío si no hay) y los cambios sin guardar de una semana no se mezclan con otra.
+- S5.6: El perfil del tutor visto por el estudiante muestra los bloques de la semana visible, independientes por semana; si esa semana está vacía pero el tutor tiene bloques en otras, se muestra la grilla vacía con un aviso.
+- S5.7: Tests RED→GREEN: backend (guardado por semana aísla semanas distintas, normalización a lunes, default semana actual, respuesta con `semanaInicio`, perfil con `semanaInicio`) y frontend (contenido distinto por semana, save con `semanaInicio` de la semana activa, semanas vacías independientes, vista del estudiante por semana).
+
 ## Tasks
 
 | ID | S# | Ruta | Estado | Commit |
@@ -50,6 +63,8 @@ Cita del usuario (L5): "tambien un modal para confirmar los detalles de la aseso
 | T3 | S3 | inline | completado | 7571580 |
 | T4 | S4 | inline | completado | 42df79e |
 | T2-fix | S2.6 | inline | completado | 8105c8a |
+| T6 | S2.5 | inline | completado | — |
+| T5 | S5 | inline | en curso | 23ce0a9 |
 
 Ruta declarada: inline en todas las tareas — ninguna escritor trigger (ninguna unidad supera ~100 líneas con superficies disjoint que justifiquen writer paralelo; T2 y T4 comparten `PublishRequestForm.tsx`, así que van secuenciales de todos modos).
 
@@ -81,3 +96,7 @@ L8 (2026-11-12): `gentle-ai` no está en el PATH de esta máquina (where.exe sin
 L9 (2026-11-12): verificador independiente (`gentle-ai-verify`) completó probes en scratch (workspace intacto, HEAD 42df79e). S2.1–S2.5 pass; **1 blocker en S2.6**: `POST /tutoring-requests/{id}/proposals` devolvía 201 y mutaba `PUBLICADA→EN_PROCESO` para un tutor fuera de la audiencia, porque `PropuestaService.create` nunca consultaba `SolicitudAudienciaTutorRepository`.
 
 L10 (2026-11-12): corrección acotada del blocker (un batch + recheck limitado): RED en `PropuestaServiceTest` (3 tests nuevos S2.6: fuera de audiencia → ForbiddenException "No tienes acceso a esta asesoria" sin mutar la solicitud; dentro → propuesta creada; sin audiencia → comportamiento baseline) → gate en `PropuestaService.create` tras resolver tutor/solicitud → GREEN. Los 3 probes del verificador se copiaron como regression tests (`T2VerifierProbeTest`, `T2VerifierDetailParityTest`, `T2VerifierProbe.test.tsx`); el probe frontend se adaptó al modal de confirmación de T4 (flujo ahora pide "Confirmar y publicar"). Recheck: suite acotada EXIT=0, backend completo EXIT=0, frontend 196/196. Commit corrección: 8105c8a. Risk: item 2 (gate de autorización de propuestas).
+
+L11 (2026-11-12): el usuario reporta el 5º cambio: "hay un problema con la agenda del tutor, como se guarda en una semana se reproduce en la otra, y la idea es qu elos horarios sean distintos". Focused question sobre semanas sin horarios: el usuario responde "arrancar vacia" — cada semana sin horarios guardados arranca vacía (no copia la semana anterior), y esto aplica también a las semanas +1 y +2 de tutores que ya tienen agenda cargada. Reescribe S1.4 (ya no recurrente); nuevo spec S5 con migración V14 (`semana_inicio`), tarea T5 en curso. Fuera de alcance: no se toca nada de `Resena`/`resenaContraparte` (L2).
+
+L12 (2026-11-12): mejora a S2 — el usuario pide que al seleccionar tutores en la publicación se pueda: 1) ver el perfil del tutor, 2) buscar por nombre (insensible a mayúsculas/minúsculas). Se añade `busquedaTutores` + filtro en `PublishRequestForm`, y enlace "Ver perfil" a `/tutoring/tutors/{id}` en nueva pestaña. Actualiza S2.5 (nuevo S2.5) y añade T6 completado. Frontend 203/203 y backend 212/212 verdes.
