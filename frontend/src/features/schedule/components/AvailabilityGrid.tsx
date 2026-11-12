@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const WEEK_DAYS = [
   'LUNES',
@@ -37,16 +38,45 @@ export function formatHour(hora: number): string {
   return `${String(hora).padStart(2, '0')}:00`;
 }
 
-function getWeekDates(): Date[] {
+function getWeekDates(weekOffset: number): Date[] {
   const now = new Date();
   const day = now.getDay();
   const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
+  const monday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() + diffToMonday + weekOffset * 7,
+  );
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     return d;
   });
+}
+
+const MONTH_SHORT_LABELS = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+] as const;
+
+export const MAX_WEEK_OFFSET = 2;
+
+function formatDayMonth(date: Date): string {
+  return `${date.getDate()} ${MONTH_SHORT_LABELS[date.getMonth()]}`;
+}
+
+function formatWeekRange(weekDates: Date[]): string {
+  return `${formatDayMonth(weekDates[0])} - ${formatDayMonth(weekDates[6])}`;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' });
@@ -66,8 +96,9 @@ export function AvailabilityGrid({
 }: AvailabilityGridProps) {
   const draggingRef = useRef(false);
   const dragValueRef = useRef(false);
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  const weekDates = useMemo(() => getWeekDates(), []);
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
   useEffect(() => {
     const stopDrag = () => {
@@ -114,6 +145,38 @@ export function AvailabilityGrid({
         compact ? 'p-3 md:p-4' : 'p-4 md:p-6'
       }`}
     >
+      <div
+        role="group"
+        aria-label="Selector de semana"
+        className="mb-3 flex items-center justify-between gap-3"
+      >
+        <button
+          type="button"
+          aria-label="Semana anterior"
+          disabled={weekOffset === 0}
+          onClick={() => setWeekOffset((offset) => Math.max(0, offset - 1))}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-color bg-bg-primary text-text-main transition-colors hover:border-brand-poli hover:text-brand-poli focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-color disabled:hover:text-text-main"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <span
+          aria-live="polite"
+          className="text-sm font-semibold text-text-main"
+          suppressHydrationWarning
+        >
+          {formatWeekRange(weekDates)}
+        </span>
+        <button
+          type="button"
+          aria-label="Semana siguiente"
+          disabled={weekOffset === MAX_WEEK_OFFSET}
+          onClick={() => setWeekOffset((offset) => Math.min(MAX_WEEK_OFFSET, offset + 1))}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-color bg-bg-primary text-text-main transition-colors hover:border-brand-poli hover:text-brand-poli focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-color disabled:hover:text-text-main"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+
       <div className="overflow-x-auto">
         <div className={compact ? 'min-w-[24rem]' : 'min-w-[42rem]'}>
           <div
