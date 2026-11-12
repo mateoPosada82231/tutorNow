@@ -8,6 +8,7 @@ import type {
   ProposalRequest,
   ResenaRequest,
   TutorProfile,
+  TutorSummary,
   TutoringRequest,
   TutoringRequestFilters,
   TutoringRequestRequest,
@@ -93,6 +94,10 @@ export function rejectProposal(id: number): Promise<Proposal> {
 
 export function fetchCatalogoMaterias(): Promise<CatalogItem[]> {
   return httpClient.get<CatalogItem[]>('/catalogs/materias');
+}
+
+export function fetchTutores(): Promise<TutorSummary[]> {
+  return httpClient.get<TutorSummary[]>('/tutors', { auth: true });
 }
 
 export function fetchTutorProfile(tutorId: number): Promise<TutorProfile> {

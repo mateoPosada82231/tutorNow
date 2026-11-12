@@ -15,6 +15,7 @@ vi.mock('../api/tutoringApi', () => ({
   fetchCatalogoMaterias: vi.fn(),
   createTutoringRequest: vi.fn(),
   fetchMisResenas: vi.fn(),
+  fetchTutores: vi.fn(),
 }));
 
 async function fillValidForm(user: ReturnType<typeof userEvent.setup>) {
@@ -41,6 +42,10 @@ describe('PublishRequestForm', () => {
       resenasRecibidas: [],
       pendientes: [],
     });
+    vi.mocked(tutoringApi.fetchTutores).mockResolvedValue([
+      { id: 10, nombre: 'Laura Gomez', materias: [{ id: 1, label: 'Matematicas II' }] },
+      { id: 11, nombre: 'Pedro Ruiz', materias: [{ id: 2, label: 'Calculo I' }] },
+    ]);
   });
 
   it('renderiza todos los campos del formulario', async () => {
@@ -114,6 +119,7 @@ describe('PublishRequestForm', () => {
         modalidad: 'VIRTUAL',
         disponibilidad: 'Lunes y miercoles 2-4pm, sabados manana',
         descripcion: undefined,
+        tutorIds: [],
       });
     });
     expect(pushMock).toHaveBeenCalledWith('/tutoring/requests');
@@ -144,5 +150,64 @@ describe('PublishRequestForm', () => {
     await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
 
     expect(await screen.findByText(/error interno del servidor/i)).toBeInTheDocument();
+  });
+
+  it('permite abrir la seleccion opcional de tutores sin enviar nada al abrir', async () => {
+    const user = userEvent.setup();
+    render(<PublishRequestForm />);
+
+    await screen.findByLabelText(/asignatura/i);
+    await user.click(screen.getByRole('button', { name: /elegir tutores/i }));
+
+    expect(await screen.findByRole('group', { name: /tutores que podran ver/i })).toBeInTheDocument();
+    expect(await screen.findByText('Laura Gomez')).toBeInTheDocument();
+    expect(screen.getByText(/todos los tutores podran ver tu publicacion/i)).toBeInTheDocument();
+    expect(tutoringApi.createTutoringRequest).not.toHaveBeenCalled();
+  });
+
+  it('envia los tutores seleccionados en la publicacion', async () => {
+    vi.mocked(tutoringApi.createTutoringRequest).mockResolvedValue({
+      id: 1,
+      tema: 'Ecuaciones diferenciales',
+      modalidad: 'VIRTUAL',
+      disponibilidad: 'Lunes y miercoles 2-4pm, sabados manana',
+      descripcion: null,
+      estado: 'PUBLICADA',
+      materia: { id: 1, label: 'Matematicas II' },
+      estudiante: { id: 2, fullName: 'Ana Perez' },
+      propuestasCount: 0,
+      isOwner: true,
+      isProfileMatch: null,
+      propuestas: [],
+      createdAt: '2026-10-10T10:00:00',
+    });
+    const user = userEvent.setup();
+    render(<PublishRequestForm />);
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /elegir tutores/i }));
+    await user.click(await screen.findByRole('checkbox', { name: /laura gomez/i }));
+    expect(screen.getByText(/1 de 2 tutores seleccionados/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /publicar asesoria/i }));
+
+    await waitFor(() => {
+      expect(tutoringApi.createTutoringRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ tutorIds: [10] }),
+      );
+    });
+    expect(pushMock).toHaveBeenCalledWith('/tutoring/requests');
+  });
+
+  it('permite deseleccionar un tutor antes de publicar', async () => {
+    const user = userEvent.setup();
+    render(<PublishRequestForm />);
+
+    await fillValidForm(user);
+    await user.click(screen.getByRole('button', { name: /elegir tutores/i }));
+    const checkbox = await screen.findByRole('checkbox', { name: /laura gomez/i });
+    await user.click(checkbox);
+    await user.click(checkbox);
+    expect(screen.getByText(/0 de 2 tutores seleccionados/i)).toBeInTheDocument();
   });
 });

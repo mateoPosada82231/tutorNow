@@ -5,6 +5,7 @@ import co.edu.epi.tutornow.tutors.dto.TutorProfileResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotsRequest;
+import co.edu.epi.tutornow.tutors.dto.TutorSummaryResponse;
 import co.edu.epi.tutornow.tutors.service.TutorService;
 import co.edu.epi.tutornow.tutors.service.TutorSlotService;
 import jakarta.validation.Valid;
@@ -34,6 +35,11 @@ public class TutorController {
     @GetMapping("/{id}")
     public ResponseEntity<TutorProfileResponse> getTutorProfile(@PathVariable Long id) {
         return ResponseEntity.ok(tutorService.getTutorProfile(id));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<TutorSummaryResponse>> listTutors() {
+        return ResponseEntity.ok(tutorService.listTutors());
     }
 
     @PostMapping("/me")

@@ -10,13 +10,18 @@ import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { HttpError } from '@/lib/httpClient';
-import { createTutoringRequest, fetchCatalogoMaterias, fetchMisResenas } from '../api/tutoringApi';
+import {
+  createTutoringRequest,
+  fetchCatalogoMaterias,
+  fetchMisResenas,
+  fetchTutores,
+} from '../api/tutoringApi';
 import {
   hasFieldErrors,
   validateTutoringRequest,
   type TutoringRequestFieldErrors,
 } from '../hooks/validation';
-import type { CatalogItem, Modalidad, ResenaPendiente } from '../types';
+import type { CatalogItem, Modalidad, ResenaPendiente, TutorSummary } from '../types';
 
 const modalidadOptions = [
   { value: 'VIRTUAL', label: 'Virtual' },
@@ -43,6 +48,12 @@ export function PublishRequestForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [audienciaAbierta, setAudienciaAbierta] = useState(false);
+  const [tutores, setTutores] = useState<TutorSummary[]>([]);
+  const [tutoresLoading, setTutoresLoading] = useState(false);
+  const [tutoresError, setTutoresError] = useState<string | null>(null);
+  const [tutorIdsSeleccionados, setTutorIdsSeleccionados] = useState<number[]>([]);
+
   async function loadMaterias() {
     setMateriasLoading(true);
     setMateriasError(null);
@@ -68,6 +79,32 @@ export function PublishRequestForm() {
     }
   }
 
+  async function loadTutores() {
+    setTutoresLoading(true);
+    setTutoresError(null);
+    try {
+      setTutores(await fetchTutores());
+    } catch {
+      setTutoresError('No pudimos cargar los tutores. Intenta de nuevo.');
+    } finally {
+      setTutoresLoading(false);
+    }
+  }
+
+  function toggleAudiencia() {
+    const abrir = !audienciaAbierta;
+    setAudienciaAbierta(abrir);
+    if (abrir && tutores.length === 0 && !tutoresLoading) {
+      void loadTutores();
+    }
+  }
+
+  function toggleTutor(tutorId: number) {
+    setTutorIdsSeleccionados((prev) =>
+      prev.includes(tutorId) ? prev.filter((id) => id !== tutorId) : [...prev, tutorId],
+    );
+  }
+
   useEffect(() => {
     void loadMaterias();
     void loadPendientes();
@@ -88,6 +125,7 @@ export function PublishRequestForm() {
       modalidad: modalidad as Modalidad,
       disponibilidad,
       descripcion: descripcion.trim() ? descripcion.trim() : undefined,
+      tutorIds: [...tutorIdsSeleccionados],
     };
 
     const errors = validateTutoringRequest(data);
@@ -235,6 +273,71 @@ export function PublishRequestForm() {
         <p className="self-end text-xs text-text-muted" aria-live="polite">
           {descripcion.length}/1000
         </p>
+      </div>
+
+      <div className="rounded-lg border border-border-color bg-bg-surface p-3">
+        <button
+          type="button"
+          onClick={toggleAudiencia}
+          aria-expanded={audienciaAbierta}
+          className="flex w-full items-center justify-between gap-2 text-sm font-semibold text-text-main focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli"
+        >
+          <span>Elegir tutores que podran ver tu asesoria (opcional)</span>
+          <span aria-hidden="true" className="text-text-muted">
+            {audienciaAbierta ? '−' : '+'}
+          </span>
+        </button>
+
+        {audienciaAbierta ? (
+          <div role="group" aria-label="Tutores que podran ver tu asesoria" className="mt-3">
+            <p className="text-xs text-text-muted">
+              Si no seleccionas a nadie, todos los tutores podran ver tu publicacion.
+            </p>
+
+            {tutoresLoading ? (
+              <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
+                <Spinner size="sm" />
+                Cargando tutores...
+              </div>
+            ) : tutoresError ? (
+              <div className="mt-2 flex flex-col gap-2">
+                <Alert type="error">{tutoresError}</Alert>
+                <Button type="button" variant="secondary" onClick={() => void loadTutores()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : (
+              <>
+                <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border-color bg-bg-primary">
+                  {tutores.map((tutor) => (
+                    <li key={tutor.id} className="border-b border-border-color last:border-b-0">
+                      <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-bg-surface">
+                        <input
+                          type="checkbox"
+                          checked={tutorIdsSeleccionados.includes(tutor.id)}
+                          onChange={() => toggleTutor(tutor.id)}
+                          className="h-4 w-4 accent-brand-poli"
+                        />
+                        <span className="font-medium text-text-main">{tutor.nombre}</span>
+                        <span className="truncate text-xs text-text-muted">
+                          {tutor.materias.map((materia) => materia.label).join(', ')}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                  {tutores.length === 0 ? (
+                    <li className="px-3 py-2 text-sm text-text-muted">
+                      No hay tutores disponibles aun.
+                    </li>
+                  ) : null}
+                </ul>
+                <p className="mt-2 text-xs text-text-muted" aria-live="polite">
+                  {tutorIdsSeleccionados.length} de {tutores.length} tutores seleccionados
+                </p>
+              </>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <Button type="submit" disabled={submitting || materiasLoading || pendientesLoading || pendientes.length > 0}>

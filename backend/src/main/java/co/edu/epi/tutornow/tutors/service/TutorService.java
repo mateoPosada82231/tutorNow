@@ -9,6 +9,7 @@ import co.edu.epi.tutornow.tutors.dto.TutorProfileRequest;
 import co.edu.epi.tutornow.tutors.dto.TutorProfileResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotResponse;
+import co.edu.epi.tutornow.tutors.dto.TutorSummaryResponse;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutors.model.TutorSlot;
 import co.edu.epi.tutornow.tutors.port.TutorResenasPort;
@@ -72,6 +73,24 @@ public class TutorService {
         Tutor tutor = tutorRepository.findById(tutorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tutor no encontrado"));
         return toProfileResponse(tutor);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TutorSummaryResponse> listTutors() {
+        return tutorRepository.findAll().stream()
+                .sorted((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(
+                        nombreDe(a), nombreDe(b)))
+                .map(t -> TutorSummaryResponse.builder()
+                        .id(t.getId())
+                        .nombre(nombreDe(t))
+                        .materias(mapMaterias(t))
+                        .build())
+                .toList();
+    }
+
+    private String nombreDe(Tutor tutor) {
+        String nombre = tutor.getUsuario().getNombreCompleto();
+        return nombre == null ? "" : nombre;
     }
 
     @Transactional
