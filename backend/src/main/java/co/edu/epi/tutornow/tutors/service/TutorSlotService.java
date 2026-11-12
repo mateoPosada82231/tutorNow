@@ -14,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -29,6 +32,11 @@ public class TutorSlotService {
     private static final LocalTime HORA_INICIO_MINIMA = LocalTime.of(8, 0);
     private static final LocalTime HORA_INICIO_MAXIMA = LocalTime.of(17, 0);
 
+    private static final Comparator<TutorSlot> SLOT_ORDER = Comparator
+            .comparing(TutorSlot::getSemanaInicio)
+            .thenComparingInt(slot -> slot.getDiaSemana().ordinal())
+            .thenComparing(TutorSlot::getHoraInicio);
+
     private final TutorRepository tutorRepository;
     private final TutorSlotRepository tutorSlotRepository;
 
@@ -37,9 +45,7 @@ public class TutorSlotService {
         Tutor tutor = findTutorOrThrow(correo);
 
         return tutorSlotRepository.findByTutorId(tutor.getId()).stream()
-                .sorted(Comparator
-                        .comparingInt((TutorSlot slot) -> slot.getDiaSemana().ordinal())
-                        .thenComparing(TutorSlot::getHoraInicio))
+                .sorted(SLOT_ORDER)
                 .map(this::toResponse)
                 .toList();
     }
@@ -48,21 +54,20 @@ public class TutorSlotService {
     public List<TutorSlotResponse> saveMySlots(String correo, TutorSlotsRequest request) {
         Tutor tutor = findTutorOrThrow(correo);
 
+        LocalDate semanaInicio = normalizeSemanaInicio(request.getSemanaInicio());
         List<TutorSlotRequest> bloques = request.getSlots() == null ? List.of() : request.getSlots();
-        Set<TutorSlot> slots = resolveSlots(tutor, bloques);
+        Set<TutorSlot> slots = resolveSlots(tutor, bloques, semanaInicio);
 
-        tutorSlotRepository.deleteByTutorId(tutor.getId());
+        tutorSlotRepository.deleteByTutorIdAndSemanaInicio(tutor.getId(), semanaInicio);
         tutorSlotRepository.saveAll(slots);
 
         return slots.stream()
-                .sorted(Comparator
-                        .comparingInt((TutorSlot slot) -> slot.getDiaSemana().ordinal())
-                        .thenComparing(TutorSlot::getHoraInicio))
+                .sorted(SLOT_ORDER)
                 .map(this::toResponse)
                 .toList();
     }
 
-    private Set<TutorSlot> resolveSlots(Tutor tutor, List<TutorSlotRequest> bloques) {
+    private Set<TutorSlot> resolveSlots(Tutor tutor, List<TutorSlotRequest> bloques, LocalDate semanaInicio) {
         Set<TutorSlot> slots = new LinkedHashSet<>();
         Set<String> claves = new HashSet<>();
 
@@ -79,10 +84,17 @@ public class TutorSlotService {
                     .tutor(tutor)
                     .diaSemana(dia)
                     .horaInicio(hora)
+                    .semanaInicio(semanaInicio)
                     .build());
         }
 
         return slots;
+    }
+
+    /** Keeps only the requested week: the incoming date is normalized to its Monday. */
+    private LocalDate normalizeSemanaInicio(LocalDate fecha) {
+        LocalDate base = fecha != null ? fecha : LocalDate.now();
+        return base.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
     }
 
     private DiaSemana parseDiaSemana(String valor) {
@@ -118,6 +130,7 @@ public class TutorSlotService {
                 .id(slot.getId())
                 .diaSemana(slot.getDiaSemana().name())
                 .horaInicio(slot.getHoraInicio())
+                .semanaInicio(slot.getSemanaInicio())
                 .build();
     }
 }

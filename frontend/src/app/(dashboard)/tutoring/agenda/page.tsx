@@ -12,6 +12,7 @@ import {
   fetchMySlots,
   saveMySlots,
   slotKeyFromHoraInicio,
+  weekMondayISO,
   WEEK_DAYS,
   type TutorSlot,
 } from '@/features/schedule';
@@ -35,6 +36,18 @@ function sameSlots(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return Array.from(a).every((key) => b.has(key));
 }
 
+const EMPTY_WEEK: ReadonlySet<string> = new Set();
+
+function groupSlotsByWeek(slots: TutorSlot[]): Record<string, ReadonlySet<string>> {
+  const byWeek: Record<string, ReadonlySet<string>> = {};
+  for (const slot of slots) {
+    const keys = new Set(byWeek[slot.semanaInicio] ?? []);
+    keys.add(slotKeyFromHoraInicio(slot.diaSemana, slot.horaInicio));
+    byWeek[slot.semanaInicio] = keys;
+  }
+  return byWeek;
+}
+
 export default function TutorAgendaPage() {
   const user = useAuthStore((state) => state.user);
   const isTutor = user?.role === 'TUTOR';
@@ -43,12 +56,25 @@ export default function TutorAgendaPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notTutor, setNotTutor] = useState(false);
 
-  const [saved, setSaved] = useState<ReadonlySet<string>>(new Set());
-  const [available, setAvailable] = useState<ReadonlySet<string>>(new Set());
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [savedByWeek, setSavedByWeek] = useState<Record<string, ReadonlySet<string>>>({});
+  const [draftByWeek, setDraftByWeek] = useState<Record<string, ReadonlySet<string>>>({});
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const monday = weekMondayISO(weekOffset);
+  const saved = savedByWeek[monday] ?? EMPTY_WEEK;
+  const draft = draftByWeek[monday];
+  const available = draft ?? saved;
+  const dirty = draft !== undefined && !sameSlots(draft, saved);
+
+  const handleWeekChange = (next: number) => {
+    setWeekOffset(next);
+    setSuccess(null);
+    setSaveError(null);
+  };
 
   const [accepted, setAccepted] = useState<TutoringRequest[]>([]);
   const [acceptedTotal, setAcceptedTotal] = useState(0);
@@ -61,11 +87,8 @@ export default function TutorAgendaPage() {
     setNotTutor(false);
     try {
       const slots: TutorSlot[] = await fetchMySlots();
-      const keys = new Set(
-        slots.map((slot) => slotKeyFromHoraInicio(slot.diaSemana, slot.horaInicio)),
-      );
-      setSaved(keys);
-      setAvailable(new Set(keys));
+      setSavedByWeek(groupSlotsByWeek(slots));
+      setDraftByWeek({});
     } catch (err) {
       if (err instanceof HttpError && err.status === 404) {
         setNotTutor(true);
@@ -112,12 +135,12 @@ export default function TutorAgendaPage() {
   const handleToggle = (diaSemana: string, hora: number, value: boolean) => {
     setSuccess(null);
     setSaveError(null);
-    setAvailable((prev) => {
-      const next = new Set(prev);
-      const key = buildSlotKey(diaSemana, hora);
+    const key = buildSlotKey(diaSemana, hora);
+    setDraftByWeek((prev) => {
+      const next = new Set(prev[monday] ?? saved);
       if (value) next.add(key);
       else next.delete(key);
-      return next;
+      return { ...prev, [monday]: next };
     });
   };
 
@@ -137,8 +160,13 @@ export default function TutorAgendaPage() {
             ? diaDiff
             : a.horaInicio.localeCompare(b.horaInicio);
         });
-      await saveMySlots({ slots });
-      setSaved(new Set(available));
+      await saveMySlots({ semanaInicio: monday, slots });
+      setSavedByWeek((prev) => ({ ...prev, [monday]: new Set(available) }));
+      setDraftByWeek((prev) => {
+        const next = { ...prev };
+        delete next[monday];
+        return next;
+      });
       setEditMode(false);
       setSuccess('Tu horario se ha guardado correctamente');
     } catch (err) {
@@ -151,7 +179,11 @@ export default function TutorAgendaPage() {
   };
 
   const handleCancel = () => {
-    setAvailable(new Set(saved));
+    setDraftByWeek((prev) => {
+      const next = { ...prev };
+      delete next[monday];
+      return next;
+    });
     setEditMode(false);
     setSaveError(null);
     setSuccess(null);
@@ -207,7 +239,6 @@ export default function TutorAgendaPage() {
     );
   }
 
-  const dirty = !sameSlots(saved, available);
   const isEmpty = saved.size === 0;
 
   return (
@@ -286,7 +317,7 @@ export default function TutorAgendaPage() {
       {success && <Alert type="success">{success}</Alert>}
       {saveError && <Alert type="error">{saveError}</Alert>}
 
-      {isEmpty && !editMode ? (
+      {isEmpty && !editMode && (
         <div className="rounded-2xl border border-dashed border-border-color bg-bg-surface p-8 text-center transition-colors duration-200">
           <h2 className="text-base font-semibold text-text-main">
             Aun no has configurado tu disponibilidad
@@ -296,9 +327,15 @@ export default function TutorAgendaPage() {
             disponible para asesorias.
           </p>
         </div>
-      ) : (
-        <AvailabilityGrid available={available} readOnly={!editMode} onToggle={handleToggle} />
       )}
+
+      <AvailabilityGrid
+        available={available}
+        readOnly={!editMode}
+        onToggle={handleToggle}
+        weekOffset={weekOffset}
+        onWeekChange={handleWeekChange}
+      />
 
       <section aria-labelledby="asesorias-aceptadas" className="flex flex-col gap-4">
         <div className="flex flex-wrap items-end justify-between gap-2">

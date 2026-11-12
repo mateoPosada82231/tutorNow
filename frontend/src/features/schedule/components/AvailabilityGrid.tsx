@@ -79,12 +79,28 @@ function formatWeekRange(weekDates: Date[]): string {
   return `${formatDayMonth(weekDates[0])} - ${formatDayMonth(weekDates[6])}`;
 }
 
+function toIsoDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/** ISO date (yyyy-MM-dd) of the Monday for the given navigable week offset. */
+export function weekMondayISO(weekOffset: number): string {
+  return toIsoDate(getWeekDates(weekOffset)[0]);
+}
+
 const dateFormatter = new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' });
 
 interface AvailabilityGridProps {
   available: ReadonlySet<string>;
   readOnly?: boolean;
   compact?: boolean;
+  /** Controlled week offset (0..MAX_WEEK_OFFSET); falls back to internal state. */
+  weekOffset?: number;
+  /** Called with the clamped offset when the user navigates weeks. */
+  onWeekChange?: (weekOffset: number) => void;
   onToggle?: (diaSemana: string, hora: number, value: boolean) => void;
 }
 
@@ -92,11 +108,26 @@ export function AvailabilityGrid({
   available,
   readOnly = false,
   compact = false,
+  weekOffset: controlledOffset,
+  onWeekChange,
   onToggle,
 }: AvailabilityGridProps) {
   const draggingRef = useRef(false);
   const dragValueRef = useRef(false);
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [internalOffset, setInternalOffset] = useState(0);
+
+  const isControlled = controlledOffset !== undefined;
+  const weekOffset = isControlled
+    ? Math.max(0, Math.min(MAX_WEEK_OFFSET, controlledOffset))
+    : internalOffset;
+
+  const changeWeek = (next: number) => {
+    const clamped = Math.max(0, Math.min(MAX_WEEK_OFFSET, next));
+    if (!isControlled) {
+      setInternalOffset(clamped);
+    }
+    onWeekChange?.(clamped);
+  };
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset]);
 
@@ -154,7 +185,7 @@ export function AvailabilityGrid({
           type="button"
           aria-label="Semana anterior"
           disabled={weekOffset === 0}
-          onClick={() => setWeekOffset((offset) => Math.max(0, offset - 1))}
+          onClick={() => changeWeek(weekOffset - 1)}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-color bg-bg-primary text-text-main transition-colors hover:border-brand-poli hover:text-brand-poli focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-color disabled:hover:text-text-main"
         >
           <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -170,7 +201,7 @@ export function AvailabilityGrid({
           type="button"
           aria-label="Semana siguiente"
           disabled={weekOffset === MAX_WEEK_OFFSET}
-          onClick={() => setWeekOffset((offset) => Math.min(MAX_WEEK_OFFSET, offset + 1))}
+          onClick={() => changeWeek(weekOffset + 1)}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-color bg-bg-primary text-text-main transition-colors hover:border-brand-poli hover:text-brand-poli focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border-color disabled:hover:text-text-main"
         >
           <ChevronRight className="h-4 w-4" aria-hidden="true" />

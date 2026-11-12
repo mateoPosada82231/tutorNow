@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, MessageSquareQuote, User } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
-import { AvailabilityGrid, slotKeyFromHoraInicio } from '@/features/schedule';
+import { AvailabilityGrid, slotKeyFromHoraInicio, weekMondayISO } from '@/features/schedule';
 import { TutorRatingSummary } from '@/features/tutoring/components/TutorRatingSummary';
 import { StarRating } from '@/features/tutoring/components/StarRating';
 import { ReportButton } from '@/features/reports';
@@ -58,6 +58,19 @@ function TutorProfileContent() {
 
   const [deciding, setDeciding] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+
+  const slotsByWeek = useMemo(() => {
+    const byWeek: Record<string, Set<string>> = {};
+    for (const slot of profile?.disponibilidad ?? []) {
+      const keys = byWeek[slot.semanaInicio] ?? new Set<string>();
+      keys.add(slotKeyFromHoraInicio(slot.diaSemana, slot.horaInicio));
+      byWeek[slot.semanaInicio] = keys;
+    }
+    return byWeek;
+  }, [profile]);
+
+  const visibleWeekSlots = slotsByWeek[weekMondayISO(weekOffset)] ?? new Set<string>();
 
   const proposal: Proposal | null =
     solicitud && proposalIdParam
@@ -209,16 +222,17 @@ function TutorProfileContent() {
             </p>
           ) : (
             <div className="mt-3">
+              {visibleWeekSlots.size === 0 && (
+                <p className="mb-2 text-sm text-text-muted">
+                  Este tutor no tiene bloques disponibles en esta semana.
+                </p>
+              )}
               <AvailabilityGrid
                 compact
                 readOnly
-                available={
-                  new Set(
-                    profile.disponibilidad.map((slot) =>
-                      slotKeyFromHoraInicio(slot.diaSemana, slot.horaInicio),
-                    ),
-                  )
-                }
+                available={visibleWeekSlots}
+                weekOffset={weekOffset}
+                onWeekChange={setWeekOffset}
               />
             </div>
           )}

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TutorAgendaPage from '@/app/(dashboard)/tutoring/agenda/page';
 import { fetchMySlots, saveMySlots } from '@/features/schedule/api/scheduleApi';
+import { weekMondayISO } from '@/features/schedule/components/AvailabilityGrid';
 import { fetchAcceptedTutoringRequests } from '@/features/tutoring/api/tutoringApi';
 import { useAuthStore } from '@/stores/useAuthStore';
 import type { TutoringRequest } from '@/features/tutoring/types';
@@ -87,7 +88,7 @@ describe('TutorAgendaPage', () => {
 
   it('carga y muestra la cuadricula con el modo de solo lectura', async () => {
     vi.mocked(fetchMySlots).mockResolvedValue([
-      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00' },
+      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00', semanaInicio: weekMondayISO(0) },
     ]);
     render(<TutorAgendaPage />);
 
@@ -103,6 +104,53 @@ describe('TutorAgendaPage', () => {
     expect(
       screen.queryByText(/aun no has configurado tu disponibilidad/i),
     ).not.toBeInTheDocument();
+  });
+
+  it('muestra los bloques propios de cada semana al navegar', async () => {
+    vi.mocked(fetchMySlots).mockResolvedValue([
+      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00', semanaInicio: weekMondayISO(0) },
+      { id: 2, diaSemana: 'MARTES', horaInicio: '09:00:00', semanaInicio: weekMondayISO(1) },
+    ]);
+    render(<TutorAgendaPage />);
+
+    await waitFor(() => expect(fetchMySlots).toHaveBeenCalledTimes(1));
+
+    expect(screen.getByRole('gridcell', { name: /lun 08:00/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('gridcell', { name: /mar 09:00/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+
+    expect(screen.getByRole('gridcell', { name: /lun 08:00/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('gridcell', { name: /mar 09:00/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('las semanas sin bloques arrancan vacias y permiten seguir navegando', async () => {
+    vi.mocked(fetchMySlots).mockResolvedValue([
+      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00', semanaInicio: weekMondayISO(0) },
+    ]);
+    render(<TutorAgendaPage />);
+
+    await screen.findByRole('button', { name: /modificar horario/i });
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+
+    expect(await screen.findByText(/aun no has configurado tu disponibilidad/i)).toBeInTheDocument();
+    expect(screen.getByRole('grid', { name: /cuadricula de disponibilidad/i })).toBeInTheDocument();
+    expect(screen.getByRole('gridcell', { name: /lun 08:00/i })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
   });
 
   it('muestra el estado vacio cuando no hay bloques configurados', async () => {
@@ -130,6 +178,7 @@ describe('TutorAgendaPage', () => {
 
     await waitFor(() => expect(saveMySlots).toHaveBeenCalledTimes(1));
     expect(saveMySlots).toHaveBeenCalledWith({
+      semanaInicio: weekMondayISO(0),
       slots: [{ diaSemana: 'LUNES', horaInicio: '08:00' }],
     });
 
@@ -139,9 +188,28 @@ describe('TutorAgendaPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('guarda la semana visible con el lunes de esa semana', async () => {
+    vi.mocked(fetchMySlots).mockResolvedValue([
+      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00', semanaInicio: weekMondayISO(0) },
+    ]);
+    render(<TutorAgendaPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /modificar horario/i }));
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+    fireEvent.pointerDown(screen.getByRole('gridcell', { name: /lun 08:00/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar cambios/i }));
+
+    await waitFor(() => expect(saveMySlots).toHaveBeenCalledTimes(1));
+    expect(saveMySlots).toHaveBeenCalledWith({
+      semanaInicio: weekMondayISO(1),
+      slots: [{ diaSemana: 'LUNES', horaInicio: '08:00' }],
+    });
+  });
+
   it('cancela los cambios sin guardar', async () => {
     vi.mocked(fetchMySlots).mockResolvedValue([
-      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00' },
+      { id: 1, diaSemana: 'LUNES', horaInicio: '08:00:00', semanaInicio: weekMondayISO(0) },
     ]);
     render(<TutorAgendaPage />);
 

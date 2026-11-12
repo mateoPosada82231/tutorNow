@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import TutorProfilePage from './page';
 import * as tutoringApi from '@/features/tutoring/api/tutoringApi';
+import { weekMondayISO } from '@/features/schedule/components/AvailabilityGrid';
 import { HttpError } from '@/lib/httpClient';
 import { useAuthStore } from '@/stores/useAuthStore';
 import type { Proposal, TutorProfile, TutoringRequest } from '@/features/tutoring/types';
@@ -41,8 +42,8 @@ function buildProfile(overrides: Partial<TutorProfile> = {}): TutorProfile {
       { id: 2, label: 'Calculo I' },
     ],
     disponibilidad: [
-      { id: 20, diaSemana: 'LUNES', horaInicio: '10:00:00' },
-      { id: 21, diaSemana: 'MIERCOLES', horaInicio: '14:00:00' },
+      { id: 20, diaSemana: 'LUNES', horaInicio: '10:00:00', semanaInicio: weekMondayISO(0) },
+      { id: 21, diaSemana: 'MIERCOLES', horaInicio: '14:00:00', semanaInicio: weekMondayISO(0) },
     ],
     resenas: [],
     ...overrides,
@@ -130,6 +131,44 @@ describe('TutorProfilePage', () => {
     expect(disponibles.length).toBe(2);
     expect(screen.getByRole('gridcell', { name: /lun 10:00 disponible/i })).toBeInTheDocument();
     expect(screen.getByRole('gridcell', { name: /mié 14:00 disponible/i })).toBeInTheDocument();
+  });
+
+  it('muestra los bloques de la semana visible y permite navegar entre semanas', async () => {
+    vi.mocked(tutoringApi.fetchTutorProfile).mockResolvedValue(
+      buildProfile({
+        disponibilidad: [
+          { id: 20, diaSemana: 'LUNES', horaInicio: '10:00:00', semanaInicio: weekMondayISO(0) },
+          { id: 22, diaSemana: 'MARTES', horaInicio: '09:00:00', semanaInicio: weekMondayISO(1) },
+        ],
+      }),
+    );
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(buildSolicitud());
+    render(<TutorProfilePage />);
+
+    await screen.findByRole('grid', { name: /cuadricula de disponibilidad/i });
+
+    expect(screen.getByRole('gridcell', { name: /lun 10:00 disponible/i })).toBeInTheDocument();
+    expect(screen.getByRole('gridcell', { name: /mar 09:00 no disponible/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+
+    expect(screen.getByRole('gridcell', { name: /lun 10:00 no disponible/i })).toBeInTheDocument();
+    expect(screen.getByRole('gridcell', { name: /mar 09:00 disponible/i })).toBeInTheDocument();
+  });
+
+  it('cuando la semana visible esta vacia muestra un aviso y permite seguir navegando', async () => {
+    vi.mocked(tutoringApi.fetchTutorProfile).mockResolvedValue(buildProfile());
+    vi.mocked(tutoringApi.fetchTutoringRequest).mockResolvedValue(buildSolicitud());
+    render(<TutorProfilePage />);
+
+    await screen.findByRole('grid', { name: /cuadricula de disponibilidad/i });
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+
+    expect(
+      screen.getByText(/no tiene bloques disponibles en esta semana/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('grid', { name: /cuadricula de disponibilidad/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /semana anterior/i })).toBeEnabled();
   });
 
   it('al aceptar la propuesta redirige al detalle de la asesoria', async () => {

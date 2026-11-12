@@ -19,6 +19,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
@@ -45,6 +46,10 @@ public class TutorSlot {
 
     @Column(name = "hora_inicio", nullable = false)
     private LocalTime horaInicio;
+
+    /** Monday of the week the slot belongs to (independent weeks). */
+    @Column(name = "semana_inicio", nullable = false)
+    private LocalDate semanaInicio;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

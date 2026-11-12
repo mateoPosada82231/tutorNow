@@ -145,12 +145,14 @@ public class TutorService {
     private TutorProfileResponse toProfileResponse(Tutor tutor) {
         List<TutorSlotResponse> disponibilidad = tutorSlotRepository.findByTutorId(tutor.getId()).stream()
                 .sorted(Comparator
-                        .comparingInt((TutorSlot slot) -> slot.getDiaSemana().ordinal())
+                        .comparing(TutorSlot::getSemanaInicio)
+                        .thenComparingInt(slot -> slot.getDiaSemana().ordinal())
                         .thenComparing(TutorSlot::getHoraInicio))
                 .map(slot -> TutorSlotResponse.builder()
                         .id(slot.getId())
                         .diaSemana(slot.getDiaSemana().name())
                         .horaInicio(slot.getHoraInicio())
+                        .semanaInicio(slot.getSemanaInicio())
                         .build())
                 .toList();
 

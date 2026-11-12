@@ -21,7 +21,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +38,9 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class TutorSlotServiceTest {
+
+    private static final LocalDate SEMANA_ACTUAL = LocalDate.of(2026, 11, 9);
+    private static final LocalDate SEMANA_SIGUIENTE = LocalDate.of(2026, 11, 16);
 
     @Mock
     private TutorRepository tutorRepository;
@@ -50,23 +56,30 @@ class TutorSlotServiceTest {
     class GetMySlots {
 
         @Test
-        @DisplayName("Retorna los slots ordenados por dia y hora")
-        void shouldReturnSlotsSortedByDayAndHour() {
+        @DisplayName("Retorna los slots ordenados por semana, dia y hora con su semanaInicio")
+        void shouldReturnSlotsSortedByWeekDayAndHour() {
             when(tutorRepository.findByUsuario_CorreoElectronico("user@elpoli.edu.co"))
                     .thenReturn(Optional.of(buildTutor()));
             when(tutorSlotRepository.findByTutorId(10L)).thenReturn(List.of(
-                    buildSlot(1L, DiaSemana.MARTES, LocalTime.of(9, 0)),
-                    buildSlot(2L, DiaSemana.LUNES, LocalTime.of(10, 0)),
-                    buildSlot(3L, DiaSemana.LUNES, LocalTime.of(8, 0))));
+                    buildSlot(1L, DiaSemana.MARTES, LocalTime.of(9, 0), SEMANA_SIGUIENTE),
+                    buildSlot(2L, DiaSemana.LUNES, LocalTime.of(10, 0), SEMANA_ACTUAL),
+                    buildSlot(3L, DiaSemana.LUNES, LocalTime.of(8, 0), SEMANA_ACTUAL),
+                    buildSlot(4L, DiaSemana.LUNES, LocalTime.of(8, 0), SEMANA_SIGUIENTE)));
 
             List<TutorSlotResponse> response = tutorSlotService.getMySlots("user@elpoli.edu.co");
 
-            assertEquals(3, response.size());
+            assertEquals(4, response.size());
+            assertEquals(SEMANA_ACTUAL, response.get(0).getSemanaInicio());
             assertEquals("LUNES", response.get(0).getDiaSemana());
             assertEquals(LocalTime.of(8, 0), response.get(0).getHoraInicio());
+            assertEquals(SEMANA_ACTUAL, response.get(1).getSemanaInicio());
             assertEquals("LUNES", response.get(1).getDiaSemana());
             assertEquals(LocalTime.of(10, 0), response.get(1).getHoraInicio());
-            assertEquals("MARTES", response.get(2).getDiaSemana());
+            assertEquals(SEMANA_SIGUIENTE, response.get(2).getSemanaInicio());
+            assertEquals("LUNES", response.get(2).getDiaSemana());
+            assertEquals(LocalTime.of(8, 0), response.get(2).getHoraInicio());
+            assertEquals(SEMANA_SIGUIENTE, response.get(3).getSemanaInicio());
+            assertEquals("MARTES", response.get(3).getDiaSemana());
         }
 
         @Test
@@ -85,44 +98,68 @@ class TutorSlotServiceTest {
     class SaveMySlots {
 
         @Test
-        @DisplayName("Reemplaza el grid completo con los nuevos slots")
-        void shouldReplaceAllSlots() {
+        @DisplayName("Reemplaza solo la semana indicada con los nuevos slots")
+        void shouldReplaceOnlyTheRequestedWeek() {
             when(tutorRepository.findByUsuario_CorreoElectronico("user@elpoli.edu.co"))
                     .thenReturn(Optional.of(buildTutor()));
-            when(tutorSlotRepository.saveAll(anyIterable())).thenAnswer(invocation -> {
-                List<TutorSlot> slots = new java.util.ArrayList<>();
-                long id = 100L;
-                for (TutorSlot slot : (Iterable<TutorSlot>) invocation.getArgument(0)) {
-                    slot.setId(id++);
-                    slots.add(slot);
-                }
-                return slots;
-            });
 
             TutorSlotsRequest request = buildRequest(List.of(
                     new TutorSlotRequest("LUNES", LocalTime.of(8, 0)),
-                    new TutorSlotRequest("MIERCOLES", LocalTime.of(15, 0))));
+                    new TutorSlotRequest("MIERCOLES", LocalTime.of(15, 0))), SEMANA_SIGUIENTE);
 
             List<TutorSlotResponse> response = tutorSlotService.saveMySlots("user@elpoli.edu.co", request);
 
-            verify(tutorSlotRepository).deleteByTutorId(10L);
+            verify(tutorSlotRepository).deleteByTutorIdAndSemanaInicio(10L, SEMANA_SIGUIENTE);
             verify(tutorSlotRepository).saveAll(anyIterable());
 
             assertEquals(2, response.size());
             assertEquals("LUNES", response.get(0).getDiaSemana());
+            assertEquals(SEMANA_SIGUIENTE, response.get(0).getSemanaInicio());
             assertEquals("MIERCOLES", response.get(1).getDiaSemana());
+            assertEquals(SEMANA_SIGUIENTE, response.get(1).getSemanaInicio());
         }
 
         @Test
-        @DisplayName("Reemplaza el grid completo incluso con lista vacia")
-        void shouldReplaceWithEmptyList() {
+        @DisplayName("Reemplaza la semana indicada incluso con lista vacia")
+        void shouldReplaceTheWeekWithEmptyList() {
             when(tutorRepository.findByUsuario_CorreoElectronico("user@elpoli.edu.co"))
                     .thenReturn(Optional.of(buildTutor()));
 
-            tutorSlotService.saveMySlots("user@elpoli.edu.co", buildRequest(List.of()));
+            tutorSlotService.saveMySlots("user@elpoli.edu.co",
+                    buildRequest(List.of(), SEMANA_SIGUIENTE));
 
-            verify(tutorSlotRepository).deleteByTutorId(10L);
+            verify(tutorSlotRepository).deleteByTutorIdAndSemanaInicio(10L, SEMANA_SIGUIENTE);
             verify(tutorSlotRepository).saveAll(anyIterable());
+        }
+
+        @Test
+        @DisplayName("Normaliza semanaInicio no lunes al lunes de esa semana")
+        void shouldNormalizeNonMondayToMonday() {
+            when(tutorRepository.findByUsuario_CorreoElectronico("user@elpoli.edu.co"))
+                    .thenReturn(Optional.of(buildTutor()));
+
+            LocalDate miercoles = LocalDate.of(2026, 11, 18);
+            List<TutorSlotResponse> response = tutorSlotService.saveMySlots("user@elpoli.edu.co",
+                    buildRequest(List.of(new TutorSlotRequest("LUNES", LocalTime.of(8, 0))), miercoles));
+
+            verify(tutorSlotRepository).deleteByTutorIdAndSemanaInicio(10L, SEMANA_SIGUIENTE);
+            assertEquals(1, response.size());
+            assertEquals(SEMANA_SIGUIENTE, response.get(0).getSemanaInicio());
+        }
+
+        @Test
+        @DisplayName("Usa la semana actual cuando el request no trae semanaInicio")
+        void shouldDefaultToCurrentWeekWhenSemanaInicioMissing() {
+            when(tutorRepository.findByUsuario_CorreoElectronico("user@elpoli.edu.co"))
+                    .thenReturn(Optional.of(buildTutor()));
+
+            LocalDate semanaActual = LocalDate.now()
+                    .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+
+            tutorSlotService.saveMySlots("user@elpoli.edu.co",
+                    buildRequest(List.of(new TutorSlotRequest("LUNES", LocalTime.of(8, 0))), null));
+
+            verify(tutorSlotRepository).deleteByTutorIdAndSemanaInicio(10L, semanaActual);
         }
 
         @Test
@@ -132,11 +169,12 @@ class TutorSlotServiceTest {
                     .thenReturn(Optional.of(buildTutor()));
 
             TutorSlotsRequest request = buildRequest(List.of(
-                    new TutorSlotRequest("LUNESDAY", LocalTime.of(8, 0))));
+                    new TutorSlotRequest("LUNESDAY", LocalTime.of(8, 0))), SEMANA_ACTUAL);
 
             assertThrows(ConflictException.class,
                     () -> tutorSlotService.saveMySlots("user@elpoli.edu.co", request));
             verify(tutorSlotRepository, never()).saveAll(anyIterable());
+            verify(tutorSlotRepository, never()).deleteByTutorIdAndSemanaInicio(any(), any());
         }
 
         @Test
@@ -146,17 +184,18 @@ class TutorSlotServiceTest {
                     .thenReturn(Optional.of(buildTutor()));
 
             TutorSlotsRequest request = buildRequest(List.of(
-                    new TutorSlotRequest("LUNES", LocalTime.of(7, 0))));
+                    new TutorSlotRequest("LUNES", LocalTime.of(7, 0))), SEMANA_ACTUAL);
 
             assertThrows(ConflictException.class,
                     () -> tutorSlotService.saveMySlots("user@elpoli.edu.co", request));
 
             TutorSlotsRequest requestTarde = buildRequest(List.of(
-                    new TutorSlotRequest("LUNES", LocalTime.of(18, 0))));
+                    new TutorSlotRequest("LUNES", LocalTime.of(18, 0))), SEMANA_ACTUAL);
 
             assertThrows(ConflictException.class,
                     () -> tutorSlotService.saveMySlots("user@elpoli.edu.co", requestTarde));
             verify(tutorSlotRepository, never()).saveAll(anyIterable());
+            verify(tutorSlotRepository, never()).deleteByTutorIdAndSemanaInicio(any(), any());
         }
 
         @Test
@@ -167,11 +206,12 @@ class TutorSlotServiceTest {
 
             TutorSlotsRequest request = buildRequest(List.of(
                     new TutorSlotRequest("LUNES", LocalTime.of(8, 0)),
-                    new TutorSlotRequest("LUNES", LocalTime.of(8, 0))));
+                    new TutorSlotRequest("LUNES", LocalTime.of(8, 0))), SEMANA_ACTUAL);
 
             assertThrows(ConflictException.class,
                     () -> tutorSlotService.saveMySlots("user@elpoli.edu.co", request));
             verify(tutorSlotRepository, never()).saveAll(anyIterable());
+            verify(tutorSlotRepository, never()).deleteByTutorIdAndSemanaInicio(any(), any());
         }
 
         @Test
@@ -181,13 +221,14 @@ class TutorSlotServiceTest {
                     .thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
-                    () -> tutorSlotService.saveMySlots("user@elpoli.edu.co", buildRequest(List.of())));
-            verify(tutorSlotRepository, never()).deleteByTutorId(any());
+                    () -> tutorSlotService.saveMySlots("user@elpoli.edu.co",
+                            buildRequest(List.of(), SEMANA_ACTUAL)));
+            verify(tutorSlotRepository, never()).deleteByTutorIdAndSemanaInicio(any(), any());
         }
     }
 
-    private TutorSlotsRequest buildRequest(List<TutorSlotRequest> slots) {
-        return TutorSlotsRequest.builder().slots(slots).build();
+    private TutorSlotsRequest buildRequest(List<TutorSlotRequest> slots, LocalDate semanaInicio) {
+        return TutorSlotsRequest.builder().slots(slots).semanaInicio(semanaInicio).build();
     }
 
     private Tutor buildTutor() {
@@ -207,12 +248,13 @@ class TutorSlotServiceTest {
                 .build();
     }
 
-    private TutorSlot buildSlot(Long id, DiaSemana dia, LocalTime hora) {
+    private TutorSlot buildSlot(Long id, DiaSemana dia, LocalTime hora, LocalDate semanaInicio) {
         return TutorSlot.builder()
                 .id(id)
                 .tutor(buildTutor())
                 .diaSemana(dia)
                 .horaInicio(hora)
+                .semanaInicio(semanaInicio)
                 .build();
     }
 }
