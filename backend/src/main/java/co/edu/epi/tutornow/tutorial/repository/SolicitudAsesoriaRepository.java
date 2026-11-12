@@ -32,6 +32,12 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
                         AND NOT EXISTS (
                             SELECT a FROM Asesoria a
                             WHERE a.solicitud.id = s.id))))
+              AND (:filtrarAudiencia = FALSE OR NOT EXISTS (
+                    SELECT aud FROM SolicitudAudienciaTutor aud
+                    WHERE aud.solicitud = s)
+                  OR EXISTS (
+                    SELECT aud FROM SolicitudAudienciaTutor aud
+                    WHERE aud.solicitud = s AND aud.tutor.id = :viewerTutorId))
             ORDER BY s.createdAt DESC
             """)
     Page<SolicitudAsesoria> findFiltered(
@@ -43,7 +49,23 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             @Param("modalidad") Modalidad modalidad,
             @Param("estado") EstadoSolicitud estado,
             @Param("q") String q,
+            @Param("filtrarAudiencia") boolean filtrarAudiencia,
+            @Param("viewerTutorId") Long viewerTutorId,
             Pageable pageable);
+
+    default Page<SolicitudAsesoria> findFiltered(
+            Long estudianteId,
+            Long viewerId,
+            boolean ocultarNoDisponibles,
+            EstadoSolicitud estadoCancelada,
+            Long materiaId,
+            Modalidad modalidad,
+            EstadoSolicitud estado,
+            String q,
+            Pageable pageable) {
+        return findFiltered(estudianteId, viewerId, ocultarNoDisponibles, estadoCancelada,
+                materiaId, modalidad, estado, q, false, null, pageable);
+    }
 
     @Query("""
             SELECT s FROM SolicitudAsesoria s
@@ -58,6 +80,12 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
                         AND NOT EXISTS (
                             SELECT a FROM Asesoria a
                             WHERE a.solicitud.id = s.id))))
+              AND (:filtrarAudiencia = FALSE OR NOT EXISTS (
+                    SELECT aud FROM SolicitudAudienciaTutor aud
+                    WHERE aud.solicitud = s)
+                  OR EXISTS (
+                    SELECT aud FROM SolicitudAudienciaTutor aud
+                    WHERE aud.solicitud = s AND aud.tutor.id = :viewerTutorId))
             ORDER BY CASE WHEN s.materia.id IN :materias THEN 0 ELSE 1 END, s.createdAt DESC
             """)
     Page<SolicitudAsesoria> findFilteredPrioritized(
@@ -69,7 +97,23 @@ public interface SolicitudAsesoriaRepository extends JpaRepository<SolicitudAses
             @Param("estado") EstadoSolicitud estado,
             @Param("q") String q,
             @Param("materias") List<Long> materias,
+            @Param("filtrarAudiencia") boolean filtrarAudiencia,
+            @Param("viewerTutorId") Long viewerTutorId,
             Pageable pageable);
+
+    default Page<SolicitudAsesoria> findFilteredPrioritized(
+            Long viewerId,
+            boolean ocultarNoDisponibles,
+            EstadoSolicitud estadoCancelada,
+            Long materiaId,
+            Modalidad modalidad,
+            EstadoSolicitud estado,
+            String q,
+            List<Long> materias,
+            Pageable pageable) {
+        return findFilteredPrioritized(viewerId, ocultarNoDisponibles, estadoCancelada,
+                materiaId, modalidad, estado, q, materias, false, null, pageable);
+    }
 
     @Query("""
             SELECT s FROM SolicitudAsesoria s

@@ -35,6 +35,7 @@ export function BecomeTutorModal({ open, onClose, onSuccess, materias }: BecomeT
   const [materiasError, setMateriasError] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
 
   if (!open) return null;
 
@@ -49,12 +50,9 @@ export function BecomeTutorModal({ open, onClose, onSuccess, materias }: BecomeT
     return !bio && materiaIds.length > 0;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    if (!validate()) return;
-
+  async function guardar() {
     setLoading(true);
+    setError(null);
     try {
       const tutor = await becomeTutor({ biografia: biografia.trim(), materiaIds });
       onSuccess(tutor);
@@ -75,6 +73,18 @@ export function BecomeTutorModal({ open, onClose, onSuccess, materias }: BecomeT
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!validate()) return;
+    setConfirmacionAbierta(true);
+  }
+
+  function volverDeConfirmacion() {
+    setConfirmacionAbierta(false);
+    setError(null);
   }
 
   return (
@@ -145,6 +155,56 @@ export function BecomeTutorModal({ open, onClose, onSuccess, materias }: BecomeT
           </Button>
         </form>
       </div>
+
+      {confirmacionAbierta ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-materias-title"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+        >
+          <div className="flex w-full max-w-sm flex-col gap-4 rounded-xl border border-border-color bg-bg-surface p-6 shadow-lg">
+            <div>
+              <h3
+                id="confirm-materias-title"
+                className="text-lg font-semibold text-text-main"
+              >
+                Confirma tus materias
+              </h3>
+              <p className="mt-1 text-sm text-text-muted">
+                Estas son las materias con las que crearas tu perfil de tutor:
+              </p>
+            </div>
+
+            {error ? <Alert type="error">{error}</Alert> : null}
+
+            <ul className="flex flex-wrap gap-2">
+              {materiaIds.map((id) => (
+                <li
+                  key={id}
+                  className="rounded-full border border-brand-poli bg-brand-poli/10 px-3 py-1 text-sm font-medium text-text-main"
+                >
+                  {materias.find((materia) => materia.id === id)?.label}
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={volverDeConfirmacion}
+                disabled={loading}
+              >
+                Volver a editar
+              </Button>
+              <Button type="button" onClick={() => void guardar()} disabled={loading}>
+                {loading ? <Spinner size="sm" /> : 'Confirmar y crear perfil'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

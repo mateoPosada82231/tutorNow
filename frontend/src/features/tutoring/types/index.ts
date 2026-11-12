@@ -55,6 +55,7 @@ export interface TutorSlot {
   id: number;
   diaSemana: string;
   horaInicio: string;
+  semanaInicio: string;
 }
 
 export interface TutorProfile {
@@ -106,6 +107,13 @@ export interface TutoringRequestRequest {
   modalidad: Modalidad;
   disponibilidad: string;
   descripcion?: string;
+  tutorIds: number[];
+}
+
+export interface TutorSummary {
+  id: number;
+  nombre: string;
+  materias: CatalogItem[];
 }
 
 export interface ProposalRequest {

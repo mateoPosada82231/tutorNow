@@ -11,6 +11,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 @Builder
@@ -36,4 +38,7 @@ public class CreateTutoringRequest {
 
     @Size(max = 1000, message = "La descripcion no puede superar 1000 caracteres")
     private String descripcion;
+
+    @Size(max = 50, message = "No puedes seleccionar mas de 50 tutores")
+    private List<Long> tutorIds;
 }

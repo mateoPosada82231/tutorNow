@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   AvailabilityGrid,
   buildSlotKey,
+  weekMondayISO,
 } from '@/features/schedule/components/AvailabilityGrid';
 
 describe('AvailabilityGrid', () => {
@@ -104,6 +105,100 @@ describe('AvailabilityGrid', () => {
 
     expect(cell(/lun 08:00/).className).toContain('bg-brand-poli');
     expect(cell(/mar 08:00/).className).toContain('bg-border-color');
+  });
+
+  it('muestra un selector de semana con el rango de la semana actual', () => {
+    render(<AvailabilityGrid available={new Set()} readOnly />);
+
+    expect(screen.getByRole('group', { name: /selector de semana/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /semana anterior/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /semana siguiente/i })).toBeEnabled();
+    expect(screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/)).toBeInTheDocument();
+  });
+
+  it('permite navegar hasta 2 semanas adelante y devolverse siempre entre 3 semanas', () => {
+    render(<AvailabilityGrid available={new Set()} readOnly />);
+
+    const rangoActual = screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/).textContent;
+
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+    const rangoSiguiente = screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/).textContent;
+    expect(rangoSiguiente).not.toBe(rangoActual);
+    expect(screen.getByRole('button', { name: /semana anterior/i })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+    expect(screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/).textContent).not.toBe(rangoSiguiente);
+    expect(screen.getByRole('button', { name: /semana siguiente/i })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /semana anterior/i }));
+    fireEvent.click(screen.getByRole('button', { name: /semana anterior/i }));
+    expect(screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/).textContent).toBe(rangoActual);
+    expect(screen.getByRole('button', { name: /semana anterior/i })).toBeDisabled();
+  });
+
+  it('muestra el contenido de la semana que le pasa el padre (semanas independientes)', () => {
+    const { rerender } = render(
+      <AvailabilityGrid
+        available={new Set([buildSlotKey('LUNES', 8)])}
+        readOnly
+        weekOffset={0}
+        onWeekChange={vi.fn()}
+      />,
+    );
+
+    expect(cell(/lun 08:00/)).toHaveAttribute('aria-pressed', 'true');
+
+    rerender(
+      <AvailabilityGrid available={new Set()} readOnly weekOffset={1} onWeekChange={vi.fn()} />,
+    );
+    expect(cell(/lun 08:00/)).toHaveAttribute('aria-pressed', 'false');
+
+    rerender(
+      <AvailabilityGrid
+        available={new Set([buildSlotKey('MARTES', 9)])}
+        readOnly
+        weekOffset={2}
+        onWeekChange={vi.fn()}
+      />,
+    );
+    expect(cell(/lun 08:00/)).toHaveAttribute('aria-pressed', 'false');
+    expect(cell(/mar 09:00/)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('en modo controlado notifica el cambio de semana al padre sin moverse solo', () => {
+    const onWeekChange = vi.fn();
+    render(
+      <AvailabilityGrid
+        available={new Set([buildSlotKey('LUNES', 8)])}
+        readOnly
+        weekOffset={0}
+        onWeekChange={onWeekChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+
+    expect(onWeekChange).toHaveBeenCalledWith(1);
+    // The parent did not move the offset, so the grid must stay on week 0.
+    expect(screen.getByRole('button', { name: /semana anterior/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /semana siguiente/i })).toBeEnabled();
+    expect(cell(/lun 08:00/)).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('weekMondayISO devuelve el lunes ISO de cada semana navegable', () => {
+    expect(weekMondayISO(0)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(new Date(`${weekMondayISO(0)}T00:00:00`).getDay()).toBe(1);
+    expect(weekMondayISO(1) > weekMondayISO(0)).toBe(true);
+    expect(weekMondayISO(2) > weekMondayISO(1)).toBe(true);
+  });
+
+  it('en modo compacto (vista del estudiante) tambien se puede navegar entre semanas', () => {
+    render(<AvailabilityGrid available={new Set()} compact readOnly />);
+
+    expect(screen.getByRole('button', { name: /semana siguiente/i })).toBeEnabled();
+    const rangoActual = screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/).textContent;
+    fireEvent.click(screen.getByRole('button', { name: /semana siguiente/i }));
+    expect(screen.getByText(/\d{1,2} \w+ - \d{1,2} \w+/).textContent).not.toBe(rangoActual);
   });
 
   it('en modo compacto las celdas son mas pequenas y se omiten las fechas', () => {

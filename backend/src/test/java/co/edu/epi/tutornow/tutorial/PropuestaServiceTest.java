@@ -17,6 +17,7 @@ import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
+import co.edu.epi.tutornow.tutorial.repository.SolicitudAudienciaTutorRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.service.PropuestaService;
 import co.edu.epi.tutornow.tutorial.service.TutorialMapper;
@@ -61,6 +62,8 @@ class PropuestaServiceTest {
     private UsuarioRepository usuarioRepository;
     @Mock
     private TutorRepository tutorRepository;
+    @Mock
+    private SolicitudAudienciaTutorRepository audienciaRepository;
     @Spy
     private TutorialMapper mapper = new TutorialMapper();
     @InjectMocks
@@ -195,6 +198,76 @@ class PropuestaServiceTest {
                     tutorUsuario.getCorreoElectronico(), 99L, requestValido))
                     .isInstanceOf(ResourceNotFoundException.class)
                     .hasMessageContaining("Asesoria no encontrada");
+        }
+
+        @Test
+        @DisplayName("Un tutor fuera de la audiencia no puede enviar propuesta (S2.6)")
+        void tutorFueraDeAudienciaNoPropone() {
+            when(usuarioRepository.findByCorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(tutorRepository.findByUsuario_CorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutor));
+            when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+            when(audienciaRepository.existsBySolicitudId(10L)).thenReturn(true);
+            when(audienciaRepository.existsBySolicitudIdAndTutorId(10L, 5L)).thenReturn(false);
+
+            assertThatThrownBy(() -> propuestaService.create(
+                    tutorUsuario.getCorreoElectronico(), 10L, requestValido))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("No tienes acceso");
+            verify(propuestaRepository, never()).save(any(Propuesta.class));
+            verify(solicitudRepository, never()).save(any(SolicitudAsesoria.class));
+            assertThat(solicitud.getEstado()).isEqualTo(EstadoSolicitud.PUBLICADA);
+        }
+
+        @Test
+        @DisplayName("Un tutor dentro de la audiencia puede enviar propuesta (S2.6)")
+        void tutorEnLaAudienciaPropone() {
+            when(usuarioRepository.findByCorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(tutorRepository.findByUsuario_CorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutor));
+            when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+            when(audienciaRepository.existsBySolicitudId(10L)).thenReturn(true);
+            when(audienciaRepository.existsBySolicitudIdAndTutorId(10L, 5L)).thenReturn(true);
+            when(propuestaRepository.existsBySolicitudIdAndTutorId(10L, 5L)).thenReturn(false);
+            when(propuestaRepository.save(any(Propuesta.class)))
+                    .thenAnswer(inv -> {
+                        Propuesta p = inv.getArgument(0);
+                        p.setId(7L);
+                        return p;
+                    });
+            when(solicitudRepository.save(any(SolicitudAsesoria.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ProposalResponse response = propuestaService.create(
+                    tutorUsuario.getCorreoElectronico(), 10L, requestValido);
+
+            verify(propuestaRepository).save(any(Propuesta.class));
+            assertThat(response.getEstado()).isEqualTo("PENDIENTE");
+        }
+
+        @Test
+        @DisplayName("Sin audiencia el comportamiento es identico al baseline (S2.6)")
+        void sinAudienciaProponeIgualQueAntes() {
+            when(usuarioRepository.findByCorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(tutorRepository.findByUsuario_CorreoElectronico(tutorUsuario.getCorreoElectronico()))
+                    .thenReturn(Optional.of(tutor));
+            when(solicitudRepository.findById(10L)).thenReturn(Optional.of(solicitud));
+            when(propuestaRepository.existsBySolicitudIdAndTutorId(10L, 5L)).thenReturn(false);
+            when(propuestaRepository.save(any(Propuesta.class)))
+                    .thenAnswer(inv -> {
+                        Propuesta p = inv.getArgument(0);
+                        p.setId(7L);
+                        return p;
+                    });
+            when(solicitudRepository.save(any(SolicitudAsesoria.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ProposalResponse response = propuestaService.create(
+                    tutorUsuario.getCorreoElectronico(), 10L, requestValido);
+
+            verify(audienciaRepository, never()).existsBySolicitudIdAndTutorId(any(), any());
+            assertThat(response.getEstado()).isEqualTo("PENDIENTE");
         }
     }
 

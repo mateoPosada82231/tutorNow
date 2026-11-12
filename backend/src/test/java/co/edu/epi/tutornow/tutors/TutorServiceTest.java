@@ -26,6 +26,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashSet;
@@ -216,15 +217,18 @@ class TutorServiceTest {
     class GetTutorProfile {
 
         @Test
-        @DisplayName("Retorna nombre, biografia, materias, disponibilidad y resenas vacias")
+        @DisplayName("Retorna nombre, biografia, materias, disponibilidad con semanaInicio y resenas vacias")
         void shouldReturnPublicTutorProfile() {
             Tutor tutor = buildTutor();
+            LocalDate semana = LocalDate.of(2026, 11, 9);
             when(tutorRepository.findById(10L)).thenReturn(Optional.of(tutor));
             when(tutorSlotRepository.findByTutorId(10L)).thenReturn(List.of(
                     TutorSlot.builder().id(20L).tutor(tutor)
-                            .diaSemana(DiaSemana.MIERCOLES).horaInicio(LocalTime.of(14, 0)).build(),
+                            .diaSemana(DiaSemana.MIERCOLES).horaInicio(LocalTime.of(14, 0))
+                            .semanaInicio(semana).build(),
                     TutorSlot.builder().id(21L).tutor(tutor)
-                            .diaSemana(DiaSemana.LUNES).horaInicio(LocalTime.of(10, 0)).build()));
+                            .diaSemana(DiaSemana.LUNES).horaInicio(LocalTime.of(10, 0))
+                            .semanaInicio(semana).build()));
             when(tutorResenasPort.obtenerResenas(10L))
                     .thenReturn(new TutorResenasPort.TutorResenasResumen(null, 0, List.of()));
 
@@ -238,6 +242,8 @@ class TutorServiceTest {
             assertEquals(2, response.getDisponibilidad().size());
             assertEquals(DiaSemana.LUNES, DiaSemana.valueOf(response.getDisponibilidad().get(0).getDiaSemana()));
             assertEquals(LocalTime.of(10, 0), response.getDisponibilidad().get(0).getHoraInicio());
+            assertEquals(semana, response.getDisponibilidad().get(0).getSemanaInicio());
+            assertEquals(semana, response.getDisponibilidad().get(1).getSemanaInicio());
             assertEquals(DiaSemana.MIERCOLES, DiaSemana.valueOf(response.getDisponibilidad().get(1).getDiaSemana()));
             assertNotNull(response.getResenas());
             assertEquals(0, response.getResenas().size());

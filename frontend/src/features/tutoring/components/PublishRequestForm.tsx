@@ -10,13 +10,18 @@ import { Select } from '@/components/ui/Select';
 import { Spinner } from '@/components/ui/Spinner';
 import { Textarea } from '@/components/ui/Textarea';
 import { HttpError } from '@/lib/httpClient';
-import { createTutoringRequest, fetchCatalogoMaterias, fetchMisResenas } from '../api/tutoringApi';
+import {
+  createTutoringRequest,
+  fetchCatalogoMaterias,
+  fetchMisResenas,
+  fetchTutores,
+} from '../api/tutoringApi';
 import {
   hasFieldErrors,
   validateTutoringRequest,
   type TutoringRequestFieldErrors,
 } from '../hooks/validation';
-import type { CatalogItem, Modalidad, ResenaPendiente } from '../types';
+import type { CatalogItem, Modalidad, ResenaPendiente, TutorSummary } from '../types';
 
 const modalidadOptions = [
   { value: 'VIRTUAL', label: 'Virtual' },
@@ -43,6 +48,16 @@ export function PublishRequestForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [audienciaAbierta, setAudienciaAbierta] = useState(false);
+  const [tutores, setTutores] = useState<TutorSummary[]>([]);
+  const [tutoresFiltrados, setTutoresFiltrados] = useState<TutorSummary[]>([]);
+  const [tutoresLoading, setTutoresLoading] = useState(false);
+  const [tutoresError, setTutoresError] = useState<string | null>(null);
+  const [tutorIdsSeleccionados, setTutorIdsSeleccionados] = useState<number[]>([]);
+  const [busquedaTutores, setBusquedaTutores] = useState('');
+
+  const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
+
   async function loadMaterias() {
     setMateriasLoading(true);
     setMateriasError(null);
@@ -68,12 +83,50 @@ export function PublishRequestForm() {
     }
   }
 
+  async function loadTutores() {
+    setTutoresLoading(true);
+    setTutoresError(null);
+    try {
+      const data = await fetchTutores();
+      setTutores(data);
+      setTutoresFiltrados(data);
+    } catch {
+      setTutoresError('No pudimos cargar los tutores. Intenta de nuevo.');
+    } finally {
+      setTutoresLoading(false);
+    }
+  }
+
+  function filtrarTutores(termino: string) {
+    setBusquedaTutores(termino);
+    if (!termino.trim()) {
+      setTutoresFiltrados(tutores);
+      return;
+    }
+    const lower = termino.toLowerCase();
+    setTutoresFiltrados(tutores.filter((t) => t.nombre.toLowerCase().includes(lower)));
+  }
+
+  function toggleAudiencia() {
+    const abrir = !audienciaAbierta;
+    setAudienciaAbierta(abrir);
+    if (abrir && tutores.length === 0 && !tutoresLoading) {
+      void loadTutores();
+    }
+  }
+
+  function toggleTutor(tutorId: number) {
+    setTutorIdsSeleccionados((prev) =>
+      prev.includes(tutorId) ? prev.filter((id) => id !== tutorId) : [...prev, tutorId],
+    );
+  }
+
   useEffect(() => {
     void loadMaterias();
     void loadPendientes();
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
 
@@ -88,17 +141,33 @@ export function PublishRequestForm() {
       modalidad: modalidad as Modalidad,
       disponibilidad,
       descripcion: descripcion.trim() ? descripcion.trim() : undefined,
+      tutorIds: [...tutorIdsSeleccionados],
     };
 
     const errors = validateTutoringRequest(data);
     setFieldErrors(errors);
     if (hasFieldErrors(errors)) return;
 
+    setConfirmacionAbierta(true);
+  }
+
+  async function publicar() {
+    const data = {
+      materiaId,
+      tema,
+      modalidad: modalidad as Modalidad,
+      disponibilidad,
+      descripcion: descripcion.trim() ? descripcion.trim() : undefined,
+      tutorIds: [...tutorIdsSeleccionados],
+    };
+
+    setFormError(null);
     setSubmitting(true);
     try {
       await createTutoringRequest(data);
       router.push('/tutoring/requests');
     } catch (err) {
+      setConfirmacionAbierta(false);
       if (err instanceof HttpError && err.status === 409) {
         setFormError(err.message);
         await loadPendientes();
@@ -237,9 +306,164 @@ export function PublishRequestForm() {
         </p>
       </div>
 
+      <div className="rounded-lg border border-border-color bg-bg-surface p-3">
+        <button
+          type="button"
+          onClick={toggleAudiencia}
+          aria-expanded={audienciaAbierta}
+          className="flex w-full items-center justify-between gap-2 text-sm font-semibold text-text-main focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-poli"
+        >
+          <span>Elegir tutores que podran ver tu asesoria (opcional)</span>
+          <span aria-hidden="true" className="text-text-muted">
+            {audienciaAbierta ? '−' : '+'}
+          </span>
+        </button>
+
+        {audienciaAbierta ? (
+          <div role="group" aria-label="Tutores que podran ver tu asesoria" className="mt-3">
+            <p className="text-xs text-text-muted">
+              Si no seleccionas a nadie, todos los tutores podran ver tu publicacion.
+            </p>
+
+            {tutoresLoading ? (
+              <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
+                <Spinner size="sm" />
+                Cargando tutores...
+              </div>
+            ) : tutoresError ? (
+              <div className="mt-2 flex flex-col gap-2">
+                <Alert type="error">{tutoresError}</Alert>
+                <Button type="button" variant="secondary" onClick={() => void loadTutores()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : (
+              <>
+                <div className="mt-2">
+                  <Input
+                    type="text"
+                    placeholder="Buscar tutor por nombre..."
+                    value={busquedaTutores}
+                    onChange={(e) => filtrarTutores(e.target.value)}
+                    className="mb-2"
+                    aria-label="Buscar tutor"
+                  />
+                </div>
+                <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border-color bg-bg-primary">
+                  {tutoresFiltrados.map((tutor) => (
+                    <li key={tutor.id} className="border-b border-border-color last:border-b-0">
+                      <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-bg-surface">
+                        <input
+                          type="checkbox"
+                          checked={tutorIdsSeleccionados.includes(tutor.id)}
+                          onChange={() => toggleTutor(tutor.id)}
+                          className="h-4 w-4 accent-brand-poli"
+                        />
+                        <span className="font-medium text-text-main">{tutor.nombre}</span>
+                        <span className="truncate text-xs text-text-muted">
+                          {tutor.materias.map((materia) => materia.label).join(', ')}
+                        </span>
+                        <a
+                          href={`/tutoring/tutors/${tutor.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto text-xs text-brand-poli hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Ver perfil
+                        </a>
+                      </label>
+                    </li>
+                  ))}
+                  {tutoresFiltrados.length === 0 && tutores.length > 0 ? (
+                    <li className="px-3 py-2 text-sm text-text-muted text-center">
+                      No se encontraron tutores con ese nombre.
+                    </li>
+                  ) : tutores.length === 0 ? (
+                    <li className="px-3 py-2 text-sm text-text-muted">
+                      No hay tutores disponibles aun.
+                    </li>
+                  ) : null}
+                </ul>
+                <p className="mt-2 text-xs text-text-muted" aria-live="polite">
+                  {tutorIdsSeleccionados.length} de {tutores.length} tutores seleccionados
+                  {busquedaTutores.trim() ? ` (filtrando: ${tutoresFiltrados.length} coincidencias)` : ''}
+                </p>
+              </>
+            )}
+          </div>
+        ) : null}
+      </div>
+
       <Button type="submit" disabled={submitting || materiasLoading || pendientesLoading || pendientes.length > 0}>
         {submitting ? <Spinner size="sm" /> : 'Publicar asesoria'}
       </Button>
+
+      {confirmacionAbierta ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-publicacion-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        >
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-xl border border-border-color bg-bg-surface p-6 shadow-lg">
+            <div>
+              <h2
+                id="confirm-publicacion-title"
+                className="text-lg font-semibold text-text-main"
+              >
+                Confirma los detalles de tu asesoria
+              </h2>
+              <p className="mt-1 text-sm text-text-muted">
+                Revisa que todo este correcto antes de publicarla.
+              </p>
+            </div>
+
+            <dl className="flex flex-col gap-2 text-sm">
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Asignatura</dt>
+                <dd className="text-right text-text-main">
+                  {materias.find((materia) => materia.id === materiaId)?.label}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Tema</dt>
+                <dd className="text-right text-text-main">{tema.trim()}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Modalidad</dt>
+                <dd className="text-right text-text-main">
+                  {modalidadOptions.find((opcion) => opcion.value === modalidad)?.label}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Disponibilidad</dt>
+                <dd className="text-right text-text-main">{disponibilidad.trim()}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-text-muted">Descripcion</dt>
+                <dd className="text-right text-text-main">
+                  {descripcion.trim() || 'Sin descripcion adicional'}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setConfirmacionAbierta(false)}
+                disabled={submitting}
+              >
+                Seguir editando
+              </Button>
+              <Button type="button" onClick={() => void publicar()} disabled={submitting}>
+                {submitting ? <Spinner size="sm" /> : 'Confirmar y publicar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }

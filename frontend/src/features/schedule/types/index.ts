@@ -2,6 +2,7 @@ export interface TutorSlot {
   id: number;
   diaSemana: string;
   horaInicio: string;
+  semanaInicio: string;
 }
 
 export interface TutorSlotRequest {
@@ -11,4 +12,5 @@ export interface TutorSlotRequest {
 
 export interface TutorSlotsRequest {
   slots: TutorSlotRequest[];
+  semanaInicio: string;
 }

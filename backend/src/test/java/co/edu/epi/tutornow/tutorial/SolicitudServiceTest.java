@@ -15,8 +15,10 @@ import co.edu.epi.tutornow.tutorial.model.EstadoSolicitud;
 import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.model.SolicitudAudienciaTutor;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
+import co.edu.epi.tutornow.tutorial.repository.SolicitudAudienciaTutorRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.service.SolicitudService;
 import co.edu.epi.tutornow.tutorial.service.TutorialMapper;
@@ -49,6 +51,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +71,8 @@ class SolicitudServiceTest {
     private TutorRepository tutorRepository;
     @Mock
     private MateriaRepository materiaRepository;
+    @Mock
+    private SolicitudAudienciaTutorRepository audienciaRepository;
     @Spy
     private TutorialMapper mapper = new TutorialMapper();
     @InjectMocks
@@ -203,6 +208,170 @@ class SolicitudServiceTest {
     }
 
     @Nested
+    @DisplayName("Audiencia de tutores")
+    class AudienciaTutores {
+
+        @Test
+        @DisplayName("Al publicar guarda los tutores seleccionados que podran ver la asesoria")
+        void guardaAudienciaAlPublicar() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(materiaRepository.findById(1L)).thenReturn(Optional.of(materiaCalculo));
+            when(solicitudRepository.save(any(SolicitudAsesoria.class)))
+                    .thenAnswer(inv -> {
+                        SolicitudAsesoria s = inv.getArgument(0);
+                        s.setId(10L);
+                        return s;
+                    });
+            Tutor tutorA = Tutor.builder().id(5L)
+                    .usuario(Usuario.builder().id(20L).rol(Rol.TUTOR).build())
+                    .materias(Set.of()).build();
+            Tutor tutorB = Tutor.builder().id(6L)
+                    .usuario(Usuario.builder().id(21L).rol(Rol.TUTOR).build())
+                    .materias(Set.of()).build();
+            when(tutorRepository.findAllById(List.of(5L, 6L))).thenReturn(List.of(tutorA, tutorB));
+            CreateTutoringRequest request = CreateTutoringRequest.builder()
+                    .materiaId(1L)
+                    .tema("Ecuaciones diferenciales")
+                    .modalidad("VIRTUAL")
+                    .disponibilidad("Lunes 2-4pm")
+                    .tutorIds(List.of(5L, 6L))
+                    .build();
+
+            solicitudService.create(estudiante.getCorreoElectronico(), request);
+
+            ArgumentCaptor<SolicitudAudienciaTutor> captor =
+                    ArgumentCaptor.forClass(SolicitudAudienciaTutor.class);
+            verify(audienciaRepository, times(2)).save(captor.capture());
+            assertThat(captor.getAllValues())
+                    .extracting(a -> a.getSolicitud().getId())
+                    .containsOnly(10L);
+            assertThat(captor.getAllValues())
+                    .extracting(a -> a.getTutor().getId())
+                    .containsExactly(5L, 6L);
+        }
+
+        @Test
+        @DisplayName("Falla si uno de los tutores seleccionados no existe")
+        void fallaSiElTutorNoExiste() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(materiaRepository.findById(1L)).thenReturn(Optional.of(materiaCalculo));
+            when(tutorRepository.findAllById(List.of(99L))).thenReturn(List.of());
+            CreateTutoringRequest request = CreateTutoringRequest.builder()
+                    .materiaId(1L)
+                    .tema("Ecuaciones diferenciales")
+                    .modalidad("VIRTUAL")
+                    .disponibilidad("Lunes 2-4pm")
+                    .tutorIds(List.of(99L))
+                    .build();
+
+            assertThatThrownBy(() -> solicitudService.create(estudiante.getCorreoElectronico(), request))
+                    .isInstanceOf(ConflictException.class)
+                    .hasMessageContaining("tutor");
+            verify(solicitudRepository, never()).save(any(SolicitudAsesoria.class));
+            verify(audienciaRepository, never()).save(any(SolicitudAudienciaTutor.class));
+        }
+
+        @Test
+        @DisplayName("Publicar sin tutorIds no crea filas de audiencia")
+        void publicarSinAudiencia() {
+            when(usuarioRepository.findByCorreoElectronico(estudiante.getCorreoElectronico()))
+                    .thenReturn(Optional.of(estudiante));
+            when(materiaRepository.findById(1L)).thenReturn(Optional.of(materiaCalculo));
+            when(solicitudRepository.save(any(SolicitudAsesoria.class)))
+                    .thenAnswer(inv -> {
+                        SolicitudAsesoria s = inv.getArgument(0);
+                        s.setId(10L);
+                        return s;
+                    });
+            CreateTutoringRequest request = CreateTutoringRequest.builder()
+                    .materiaId(1L)
+                    .tema("Ecuaciones diferenciales")
+                    .modalidad("VIRTUAL")
+                    .disponibilidad("Lunes 2-4pm")
+                    .build();
+
+            solicitudService.create(estudiante.getCorreoElectronico(), request);
+
+            verify(audienciaRepository, never()).save(any(SolicitudAudienciaTutor.class));
+            verify(tutorRepository, never()).findAllById(any());
+        }
+
+        @Test
+        @DisplayName("Un tutor fuera de la audiencia no puede ver el detalle (403)")
+        void tutorFueraDeAudienciaNoVeElDetalle() {
+            Usuario tutorUsuario = Usuario.builder()
+                    .id(21L)
+                    .correoElectronico("tutor_b@elpoli.edu.co")
+                    .rol(Rol.TUTOR)
+                    .build();
+            Tutor tutorB = Tutor.builder().id(6L).usuario(tutorUsuario).materias(Set.of()).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor_b@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(solicitudRepository.findById(1L))
+                    .thenReturn(Optional.of(solicitudDeEstudiante(1L, EstadoSolicitud.PUBLICADA)));
+            when(tutorRepository.findByUsuario_CorreoElectronico("tutor_b@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorB));
+            when(audienciaRepository.existsBySolicitudId(1L)).thenReturn(true);
+            when(audienciaRepository.existsBySolicitudIdAndTutorId(1L, 6L)).thenReturn(false);
+
+            assertThatThrownBy(() -> solicitudService.getById("tutor_b@elpoli.edu.co", 1L))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("No tienes acceso");
+        }
+
+        @Test
+        @DisplayName("Un tutor dentro de la audiencia puede ver el detalle")
+        void tutorEnLaAudienciaVeElDetalle() {
+            Usuario tutorUsuario = Usuario.builder()
+                    .id(20L)
+                    .correoElectronico("tutor_a@elpoli.edu.co")
+                    .rol(Rol.TUTOR)
+                    .build();
+            Tutor tutorA = Tutor.builder().id(5L).usuario(tutorUsuario)
+                    .materias(Set.of(materiaCalculo)).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor_a@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(solicitudRepository.findById(1L))
+                    .thenReturn(Optional.of(solicitudDeEstudiante(1L, EstadoSolicitud.PUBLICADA)));
+            when(tutorRepository.findByUsuario_CorreoElectronico("tutor_a@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorA));
+            when(audienciaRepository.existsBySolicitudId(1L)).thenReturn(true);
+            when(audienciaRepository.existsBySolicitudIdAndTutorId(1L, 5L)).thenReturn(true);
+            when(propuestaRepository.findBySolicitudIdOrderByCreatedAtAsc(1L)).thenReturn(List.of());
+
+            TutoringRequestResponse response = solicitudService.getById("tutor_a@elpoli.edu.co", 1L);
+
+            assertThat(response.getId()).isEqualTo(1L);
+            assertThat(response.getIsProfileMatch()).isTrue();
+        }
+
+        @Test
+        @DisplayName("El feed del tutor consulta con el filtro de audiencia activado")
+        void feedDelTutorActivaElFiltroDeAudiencia() {
+            Usuario tutorUsuario = Usuario.builder().id(2L).rol(Rol.TUTOR).build();
+            Tutor tutor = Tutor.builder().id(5L).usuario(tutorUsuario)
+                    .materias(Set.of(materiaCalculo)).build();
+            when(usuarioRepository.findByCorreoElectronico("tutor@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutorUsuario));
+            when(tutorRepository.findByUsuario_CorreoElectronico("tutor@elpoli.edu.co"))
+                    .thenReturn(Optional.of(tutor));
+            SolicitudAsesoria solicitud = solicitudDeEstudiante(1L, EstadoSolicitud.PUBLICADA);
+            when(solicitudRepository.findFilteredPrioritized(
+                    any(), anyBoolean(), any(), any(), any(), any(), any(), any(),
+                    anyBoolean(), any(), any()))
+                    .thenReturn(new PageImpl<>(List.of(solicitud), PageRequest.of(0, 10), 1));
+
+            solicitudService.list("tutor@elpoli.edu.co", null, null, null, null, 0, 10, null);
+
+            verify(solicitudRepository).findFilteredPrioritized(eq(2L), eq(true),
+                    eq(EstadoSolicitud.CANCELADA), isNull(), isNull(), isNull(), isNull(),
+                    any(), eq(true), eq(5L), any());
+        }
+    }
+
+    @Nested
     @DisplayName("Listar asesorias")
     class ListarSolicitudes {
 
@@ -245,14 +414,15 @@ class SolicitudServiceTest {
                     .tema("Tiro parabolico").modalidad(Modalidad.VIRTUAL)
                     .disponibilidad("Viernes 10-12am").estado(EstadoSolicitud.PUBLICADA)
                     .createdAt(OffsetDateTime.now()).build();
-            when(solicitudRepository.findFilteredPrioritized(any(), anyBoolean(), any(), any(), any(), any(), any(), any(), any()))
+            when(solicitudRepository.findFilteredPrioritized(any(), anyBoolean(), any(), any(), any(), any(), any(), any(), anyBoolean(), any(), any()))
                     .thenReturn(new PageImpl<>(List.of(match, otro), PageRequest.of(0, 10), 2));
 
             PageResponse<TutoringRequestResponse> page = solicitudService.list(
                     "tutor@elpoli.edu.co", null, null, null, null, 0, 10, null);
 
             verify(solicitudRepository).findFilteredPrioritized(eq(2L), eq(true),
-                    eq(EstadoSolicitud.CANCELADA), isNull(), isNull(), isNull(), isNull(), any(), any());
+                    eq(EstadoSolicitud.CANCELADA), isNull(), isNull(), isNull(), isNull(),
+                    any(), eq(true), eq(5L), any());
             assertThat(page.getData()).hasSize(2);
             assertThat(page.getData().get(0).getIsProfileMatch()).isTrue();
             assertThat(page.getData().get(1).getIsProfileMatch()).isFalse();

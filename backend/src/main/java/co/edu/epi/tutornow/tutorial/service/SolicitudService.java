@@ -17,9 +17,11 @@ import co.edu.epi.tutornow.tutorial.model.Modalidad;
 import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
+import co.edu.epi.tutornow.tutorial.model.SolicitudAudienciaTutor;
 import co.edu.epi.tutornow.tutorial.model.VistaSolicitudes;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
+import co.edu.epi.tutornow.tutorial.repository.SolicitudAudienciaTutorRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutors.repository.TutorRepository;
@@ -34,6 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -45,6 +48,7 @@ public class SolicitudService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final SolicitudAsesoriaRepository solicitudRepository;
+    private final SolicitudAudienciaTutorRepository audienciaRepository;
     private final PropuestaRepository propuestaRepository;
     private final AsesoriaRepository asesoriaRepository;
     private final UsuarioRepository usuarioRepository;
@@ -65,6 +69,7 @@ public class SolicitudService {
         Materia materia = materiaRepository.findById(request.getMateriaId())
                 .filter(Materia::isActiva)
                 .orElseThrow(() -> new ConflictException("La materia no existe o no esta activa"));
+        List<Tutor> tutoresAudiencia = resolverTutoresAudiencia(request.getTutorIds());
         String descripcion = request.getDescripcion() == null || request.getDescripcion().isBlank()
                 ? null
                 : request.getDescripcion().trim();
@@ -78,7 +83,28 @@ public class SolicitudService {
                 .estado(EstadoSolicitud.PUBLICADA)
                 .build();
         solicitud = solicitudRepository.save(solicitud);
+        for (Tutor tutor : tutoresAudiencia) {
+            audienciaRepository.save(SolicitudAudienciaTutor.builder()
+                    .solicitud(solicitud)
+                    .tutor(tutor)
+                    .build());
+        }
         return mapper.toSolicitudResponse(usuario, solicitud, 0L, List.of(), null, null);
+    }
+
+    private List<Tutor> resolverTutoresAudiencia(List<Long> tutorIds) {
+        if (tutorIds == null || tutorIds.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = tutorIds.stream().filter(Objects::nonNull).distinct().toList();
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        List<Tutor> tutores = tutorRepository.findAllById(ids);
+        if (tutores.size() != ids.size()) {
+            throw new ConflictException("Uno de los tutores seleccionados no existe");
+        }
+        return tutores;
     }
 
     @Transactional(readOnly = true)
@@ -108,16 +134,17 @@ public class SolicitudService {
         Page<SolicitudAsesoria> resultado;
         if (esTutor && !vistaPersonal) {
             Tutor tutor = tutorRepository.findByUsuario_CorreoElectronico(correo).orElse(null);
+            Long viewerTutorId = tutor == null ? null : tutor.getId();
             if (tutor != null) {
                 materiasTutor = tutor.getMaterias().stream().map(Materia::getId).collect(Collectors.toSet());
             }
             resultado = materiasTutor.isEmpty()
                     ? solicitudRepository.findFiltered(null, usuario.getId(), true,
                             EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro,
-                            textoFiltro, pageable)
+                            textoFiltro, true, viewerTutorId, pageable)
                     : solicitudRepository.findFilteredPrioritized(usuario.getId(), true,
                             EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro,
-                            textoFiltro, List.copyOf(materiasTutor), pageable);
+                            textoFiltro, List.copyOf(materiasTutor), true, viewerTutorId, pageable);
         } else if (vistaFiltro == null) {
             resultado = solicitudRepository.findFiltered(usuario.getId(), usuario.getId(), false,
                     EstadoSolicitud.CANCELADA, materiaId, modalidadFiltro, estadoFiltro, textoFiltro, pageable);
@@ -325,6 +352,16 @@ public class SolicitudService {
         }
         Asesoria asesoria = asesoriaRepository.findBySolicitudId(solicitud.getId()).orElse(null);
         if (asesoria == null) {
+            Long tutorIdViewer = tutorRepository
+                    .findByUsuario_CorreoElectronico(usuario.getCorreoElectronico())
+                    .map(Tutor::getId)
+                    .orElse(null);
+            boolean conAudiencia = audienciaRepository.existsBySolicitudId(solicitud.getId());
+            boolean dentroDeAudiencia = tutorIdViewer != null
+                    && audienciaRepository.existsBySolicitudIdAndTutorId(solicitud.getId(), tutorIdViewer);
+            if (conAudiencia && !dentroDeAudiencia) {
+                throw new ForbiddenException("No tienes acceso a esta asesoria");
+            }
             return;
         }
         boolean tutorAsignado = asesoria.getTutor().getUsuario().getId().equals(usuario.getId());

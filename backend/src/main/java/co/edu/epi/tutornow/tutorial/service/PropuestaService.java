@@ -16,6 +16,7 @@ import co.edu.epi.tutornow.tutorial.model.Propuesta;
 import co.edu.epi.tutornow.tutorial.model.SolicitudAsesoria;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.PropuestaRepository;
+import co.edu.epi.tutornow.tutorial.repository.SolicitudAudienciaTutorRepository;
 import co.edu.epi.tutornow.tutorial.repository.SolicitudAsesoriaRepository;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutors.repository.TutorRepository;
@@ -34,6 +35,7 @@ public class PropuestaService {
 
     private final PropuestaRepository propuestaRepository;
     private final SolicitudAsesoriaRepository solicitudRepository;
+    private final SolicitudAudienciaTutorRepository audienciaRepository;
     private final AsesoriaRepository asesoriaRepository;
     private final UsuarioRepository usuarioRepository;
     private final TutorRepository tutorRepository;
@@ -48,6 +50,10 @@ public class PropuestaService {
         Tutor tutor = tutorRepository.findByUsuario_CorreoElectronico(correo)
                 .orElseThrow(() -> new ResourceNotFoundException("No tienes un perfil de tutor"));
         SolicitudAsesoria solicitud = findSolicitud(solicitudId);
+        if (audienciaRepository.existsBySolicitudId(solicitudId)
+                && !audienciaRepository.existsBySolicitudIdAndTutorId(solicitudId, tutor.getId())) {
+            throw new ForbiddenException("No tienes acceso a esta asesoria");
+        }
         if (solicitud.getEstudiante().getId().equals(usuario.getId())) {
             throw new ForbiddenException("No puedes enviar una propuesta a tu propia asesoria");
         }

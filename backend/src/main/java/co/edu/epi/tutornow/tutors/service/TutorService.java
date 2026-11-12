@@ -9,6 +9,7 @@ import co.edu.epi.tutornow.tutors.dto.TutorProfileRequest;
 import co.edu.epi.tutornow.tutors.dto.TutorProfileResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorResponse;
 import co.edu.epi.tutornow.tutors.dto.TutorSlotResponse;
+import co.edu.epi.tutornow.tutors.dto.TutorSummaryResponse;
 import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutors.model.TutorSlot;
 import co.edu.epi.tutornow.tutors.port.TutorResenasPort;
@@ -74,6 +75,24 @@ public class TutorService {
         return toProfileResponse(tutor);
     }
 
+    @Transactional(readOnly = true)
+    public List<TutorSummaryResponse> listTutors() {
+        return tutorRepository.findAll().stream()
+                .sorted((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(
+                        nombreDe(a), nombreDe(b)))
+                .map(t -> TutorSummaryResponse.builder()
+                        .id(t.getId())
+                        .nombre(nombreDe(t))
+                        .materias(mapMaterias(t))
+                        .build())
+                .toList();
+    }
+
+    private String nombreDe(Tutor tutor) {
+        String nombre = tutor.getUsuario().getNombreCompleto();
+        return nombre == null ? "" : nombre;
+    }
+
     @Transactional
     public TutorResponse updateMyTutorProfile(String correo, TutorProfileRequest request) {
         Tutor tutor = findTutorOrThrow(correo);
@@ -126,12 +145,14 @@ public class TutorService {
     private TutorProfileResponse toProfileResponse(Tutor tutor) {
         List<TutorSlotResponse> disponibilidad = tutorSlotRepository.findByTutorId(tutor.getId()).stream()
                 .sorted(Comparator
-                        .comparingInt((TutorSlot slot) -> slot.getDiaSemana().ordinal())
+                        .comparing(TutorSlot::getSemanaInicio)
+                        .thenComparingInt(slot -> slot.getDiaSemana().ordinal())
                         .thenComparing(TutorSlot::getHoraInicio))
                 .map(slot -> TutorSlotResponse.builder()
                         .id(slot.getId())
                         .diaSemana(slot.getDiaSemana().name())
                         .horaInicio(slot.getHoraInicio())
+                        .semanaInicio(slot.getSemanaInicio())
                         .build())
                 .toList();
 
