@@ -50,9 +50,11 @@ export function PublishRequestForm() {
 
   const [audienciaAbierta, setAudienciaAbierta] = useState(false);
   const [tutores, setTutores] = useState<TutorSummary[]>([]);
+  const [tutoresFiltrados, setTutoresFiltrados] = useState<TutorSummary[]>([]);
   const [tutoresLoading, setTutoresLoading] = useState(false);
   const [tutoresError, setTutoresError] = useState<string | null>(null);
   const [tutorIdsSeleccionados, setTutorIdsSeleccionados] = useState<number[]>([]);
+  const [busquedaTutores, setBusquedaTutores] = useState('');
 
   const [confirmacionAbierta, setConfirmacionAbierta] = useState(false);
 
@@ -85,12 +87,24 @@ export function PublishRequestForm() {
     setTutoresLoading(true);
     setTutoresError(null);
     try {
-      setTutores(await fetchTutores());
+      const data = await fetchTutores();
+      setTutores(data);
+      setTutoresFiltrados(data);
     } catch {
       setTutoresError('No pudimos cargar los tutores. Intenta de nuevo.');
     } finally {
       setTutoresLoading(false);
     }
+  }
+
+  function filtrarTutores(termino: string) {
+    setBusquedaTutores(termino);
+    if (!termino.trim()) {
+      setTutoresFiltrados(tutores);
+      return;
+    }
+    const lower = termino.toLowerCase();
+    setTutoresFiltrados(tutores.filter((t) => t.nombre.toLowerCase().includes(lower)));
   }
 
   function toggleAudiencia() {
@@ -325,8 +339,18 @@ export function PublishRequestForm() {
               </div>
             ) : (
               <>
+                <div className="mt-2">
+                  <Input
+                    type="text"
+                    placeholder="Buscar tutor por nombre..."
+                    value={busquedaTutores}
+                    onChange={(e) => filtrarTutores(e.target.value)}
+                    className="mb-2"
+                    aria-label="Buscar tutor"
+                  />
+                </div>
                 <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border-color bg-bg-primary">
-                  {tutores.map((tutor) => (
+                  {tutoresFiltrados.map((tutor) => (
                     <li key={tutor.id} className="border-b border-border-color last:border-b-0">
                       <label className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-bg-surface">
                         <input
@@ -339,10 +363,23 @@ export function PublishRequestForm() {
                         <span className="truncate text-xs text-text-muted">
                           {tutor.materias.map((materia) => materia.label).join(', ')}
                         </span>
+                        <a
+                          href={`/tutoring/tutors/${tutor.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto text-xs text-brand-poli hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Ver perfil
+                        </a>
                       </label>
                     </li>
                   ))}
-                  {tutores.length === 0 ? (
+                  {tutoresFiltrados.length === 0 && tutores.length > 0 ? (
+                    <li className="px-3 py-2 text-sm text-text-muted text-center">
+                      No se encontraron tutores con ese nombre.
+                    </li>
+                  ) : tutores.length === 0 ? (
                     <li className="px-3 py-2 text-sm text-text-muted">
                       No hay tutores disponibles aun.
                     </li>
@@ -350,6 +387,7 @@ export function PublishRequestForm() {
                 </ul>
                 <p className="mt-2 text-xs text-text-muted" aria-live="polite">
                   {tutorIdsSeleccionados.length} de {tutores.length} tutores seleccionados
+                  {busquedaTutores.trim() ? ` (filtrando: ${tutoresFiltrados.length} coincidencias)` : ''}
                 </p>
               </>
             )}
