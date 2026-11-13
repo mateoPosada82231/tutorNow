@@ -107,10 +107,10 @@ export default function TutorPanelPage() {
 
       <section aria-label="Herramientas de tutor" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <TutorCard
+          href="/tutoring/requests"
           icon={Inbox}
           title="Solicitudes recibidas"
           description="Revisa las solicitudes de asesoria de los estudiantes y envia propuestas."
-          soon
         />
         <TutorCard
           href="/tutoring/agenda"
@@ -119,10 +119,10 @@ export default function TutorPanelPage() {
           description="Configura tus horarios disponibles y consulta las asesorías aceptadas por los estudiantes."
         />
         <TutorCard
+          href="/profile"
           icon={Star}
           title="Mis resenas"
           description="Consulta las calificaciones y comentarios que te dejan los estudiantes."
-          soon
         />
         <TutorCard
           href="/profile"
