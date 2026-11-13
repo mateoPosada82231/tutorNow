@@ -21,10 +21,8 @@ function ReviewItem({ resena, label }: { resena: Resena; label: string }) {
 
 export function AsesoriaReviewList({ asesoria }: AsesoriaReviewListProps) {
   const miResena = asesoria.miResena ?? null;
-  const completa =
-    asesoria.estadoEvaluacion === 'COMPLETA' || asesoria.estado === 'EVALUADA';
 
-  if (!miResena && !completa) return null;
+  if (!miResena) return null;
 
   return (
     <section
@@ -47,11 +45,6 @@ export function AsesoriaReviewList({ asesoria }: AsesoriaReviewListProps) {
         ) : null}
       </ul>
 
-      {!completa && miResena ? (
-        <p className="rounded-lg border border-dashed border-border-color bg-bg-primary p-3 text-sm text-text-muted">
-          Tu reseña está guardada. Se mostrará cuando la otra parte envíe la suya.
-        </p>
-      ) : null}
     </section>
   );
 }
