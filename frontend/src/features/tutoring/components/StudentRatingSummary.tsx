@@ -18,14 +18,14 @@ export function StudentRatingSummary({
       aria-label="Mi calificación como estudiante"
       className="rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-colors duration-300 md:p-6"
     >
-      <h2 className="text-lg font-semibold text-text-main">Mi calificación como estudiante</h2>
+      <h2 className="text-lg font-semibold text-text-main">Mis calificaciones recibidas</h2>
       <p className="mt-1 text-sm text-text-muted">
         Este promedio es privado: solo tú puedes verlo.
       </p>
 
       {promedio == null || total === 0 ? (
         <p className="mt-4 rounded-lg border border-dashed border-border-color bg-bg-primary p-4 text-sm text-text-muted">
-          Aún no tienes reseñas de tutores.
+          Aún no tienes reseñas.
         </p>
       ) : (
         <>

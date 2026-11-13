@@ -15,6 +15,7 @@ import co.edu.epi.tutornow.tutorial.model.Resena;
 import co.edu.epi.tutornow.tutorial.model.RolAutorResena;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.ResenaRepository;
+import co.edu.epi.tutornow.users.model.Rol;
 import co.edu.epi.tutornow.users.model.Usuario;
 import co.edu.epi.tutornow.users.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
@@ -87,10 +88,18 @@ public class ResenaService {
     public MisResenasResponse obtenerMisResenas(String correo) {
         Usuario usuario = findUsuario(correo);
 
-        List<ResenaRecibidaResponse> recibidas = resenaRepository
-                .findRecibidasPorEstudiante(
-                        usuario.getId(), RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA)
-                .stream()
+        boolean esTutor = usuario.getRol() == Rol.TUTOR;
+
+        List<Resena> resenasRecibidasRaw;
+        if (esTutor) {
+            resenasRecibidasRaw = resenaRepository.findPublicasPorTutor(
+                    usuario.getId(), RolAutorResena.ESTUDIANTE, EstadoAsesoria.EVALUADA);
+        } else {
+            resenasRecibidasRaw = resenaRepository.findRecibidasPorEstudiante(
+                    usuario.getId(), RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA);
+        }
+
+        List<ResenaRecibidaResponse> recibidas = resenasRecibidasRaw.stream()
                 .map(r -> ResenaRecibidaResponse.builder()
                         .id(r.getId())
                         .rating(r.getRating())
