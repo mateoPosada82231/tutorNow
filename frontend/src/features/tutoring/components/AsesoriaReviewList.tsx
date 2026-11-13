@@ -21,20 +21,17 @@ function ReviewItem({ resena, label }: { resena: Resena; label: string }) {
 
 export function AsesoriaReviewList({ asesoria }: AsesoriaReviewListProps) {
   const miResena = asesoria.miResena ?? null;
-  const resenaContraparte = asesoria.resenaContraparte ?? null;
-  const completa =
-    asesoria.estadoEvaluacion === 'COMPLETA' || asesoria.estado === 'EVALUADA';
 
-  if (!miResena && !completa) return null;
+  if (!miResena) return null;
 
   return (
     <section
-      aria-label="Reseñas de la asesoría"
+      aria-label="Mi reseña de la asesoría"
       className="flex flex-col gap-3 rounded-2xl border border-border-color bg-bg-surface p-4 shadow-sm transition-colors duration-300 md:p-6"
     >
       <div className="flex items-center gap-2">
         <MessageSquareQuote className="h-5 w-5 text-brand-poli" aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-text-main">Reseñas de la asesoría</h2>
+        <h2 className="text-lg font-semibold text-text-main">Mi reseña</h2>
       </div>
 
       <ul className="flex flex-col gap-3">
@@ -46,21 +43,8 @@ export function AsesoriaReviewList({ asesoria }: AsesoriaReviewListProps) {
             }`}
           />
         ) : null}
-        {completa && resenaContraparte ? (
-          <ReviewItem
-            resena={resenaContraparte}
-            label={`Reseña del ${
-              resenaContraparte.rolAutor === 'ESTUDIANTE' ? 'estudiante' : 'tutor'
-            }`}
-          />
-        ) : null}
       </ul>
 
-      {!completa && miResena ? (
-        <p className="rounded-lg border border-dashed border-border-color bg-bg-primary p-3 text-sm text-text-muted">
-          Tu reseña está guardada. Se mostrará cuando la otra parte envíe la suya.
-        </p>
-      ) : null}
     </section>
   );
 }
