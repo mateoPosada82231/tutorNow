@@ -1,4 +1,5 @@
 import { StarRating } from './StarRating';
+import { ReportButton } from '@/features/reports/components/ReportButton';
 import type { ResenaRecibida } from '../types';
 
 interface StudentRatingSummaryProps {
@@ -42,9 +43,12 @@ export function StudentRatingSummary({
                 key={resena.id}
                 className="rounded-lg border border-border-color bg-bg-primary p-3 text-sm text-text-main"
               >
-                <div className="flex items-center gap-2">
-                  <StarRating rating={resena.rating} />
-                  <span className="text-xs font-semibold">{resena.rating}/5</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <StarRating rating={resena.rating} />
+                    <span className="text-xs font-semibold">{resena.rating}/5</span>
+                  </div>
+                  <ReportButton tipo="RESENA" targetId={resena.id} />
                 </div>
                 <p className="mt-2">{resena.comentario}</p>
               </li>
