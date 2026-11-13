@@ -11,12 +11,14 @@ import co.edu.epi.tutornow.tutorial.dto.ResenaRequest;
 import co.edu.epi.tutornow.tutorial.model.Asesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoAsesoria;
 import co.edu.epi.tutornow.tutorial.model.EstadoModeracion;
+import co.edu.epi.tutornow.tutors.model.Tutor;
 import co.edu.epi.tutornow.tutorial.model.Resena;
 import co.edu.epi.tutornow.tutorial.model.RolAutorResena;
 import co.edu.epi.tutornow.tutorial.repository.AsesoriaRepository;
 import co.edu.epi.tutornow.tutorial.repository.ResenaRepository;
 import co.edu.epi.tutornow.users.model.Rol;
 import co.edu.epi.tutornow.users.model.Usuario;
+import co.edu.epi.tutornow.tutors.repository.TutorRepository;
 import co.edu.epi.tutornow.users.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class ResenaService {
     private final ResenaRepository resenaRepository;
     private final AsesoriaRepository asesoriaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final TutorRepository tutorRepository;
     private final TutorialMapper mapper;
 
     @Transactional
@@ -92,8 +95,10 @@ public class ResenaService {
 
         List<Resena> resenasRecibidasRaw;
         if (esTutor) {
+            Tutor tutor = tutorRepository.findByUsuario_Id(usuario.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Tutor no encontrado"));
             resenasRecibidasRaw = resenaRepository.findPublicasPorTutor(
-                    usuario.getId(), RolAutorResena.ESTUDIANTE, EstadoAsesoria.EVALUADA);
+                    tutor.getId(), RolAutorResena.ESTUDIANTE, EstadoAsesoria.EVALUADA);
         } else {
             resenasRecibidasRaw = resenaRepository.findRecibidasPorEstudiante(
                     usuario.getId(), RolAutorResena.TUTOR, EstadoAsesoria.EVALUADA);
