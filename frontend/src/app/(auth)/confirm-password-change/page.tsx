@@ -1,17 +1,26 @@
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ConfirmationStatus } from '@/features/auth/components/ConfirmationStatus';
 import { confirmPasswordChange } from '@/features/auth/api/authApi';
 
-interface ConfirmPasswordChangePageProps {
-  searchParams: { token?: string };
-}
-
-export default function ConfirmPasswordChangePage({ searchParams }: ConfirmPasswordChangePageProps) {
+function ConfirmPasswordChangeContent() {
+  const searchParams = useSearchParams();
   return (
     <ConfirmationStatus
-      token={searchParams.token ?? null}
+      token={searchParams.get('token')}
       action={confirmPasswordChange}
       title="Cambio de contrasena"
       successMessage="Tu contrasena fue actualizada correctamente."
     />
+  );
+}
+
+export default function ConfirmPasswordChangePage() {
+  return (
+    <Suspense fallback={null}>
+      <ConfirmPasswordChangeContent />
+    </Suspense>
   );
 }

@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { Check } from 'lucide-react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+  label?: string;
   error?: string;
   valid?: boolean;
 }
@@ -11,9 +11,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, valid, id, className = '', ...props }, ref) => {
     return (
       <div className="flex w-full flex-col gap-1">
-        <label htmlFor={id} className="text-sm font-medium text-text-main">
-          {label}
-        </label>
+        {label ? (
+          <label htmlFor={id} className="text-sm font-medium text-text-main">
+            {label}
+          </label>
+        ) : null}
         <div className="relative">
           <input
             ref={ref}

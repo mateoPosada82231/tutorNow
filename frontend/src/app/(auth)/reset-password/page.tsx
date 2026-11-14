@@ -1,12 +1,15 @@
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ResetPasswordForm } from '@/features/auth/components/ResetPasswordForm';
 import { Alert } from '@/components/ui/Alert';
 
-interface ResetPasswordPageProps {
-  searchParams: { token?: string };
-}
+function ResetPasswordContent() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
 
-export default function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
-  if (!searchParams.token) {
+  if (!token) {
     return (
       <Alert type="error">
         El enlace no es valido o esta incompleto. Solicita uno nuevo desde la opcion de recuperar
@@ -15,5 +18,13 @@ export default function ResetPasswordPage({ searchParams }: ResetPasswordPagePro
     );
   }
 
-  return <ResetPasswordForm token={searchParams.token} />;
+  return <ResetPasswordForm token={token} />;
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordContent />
+    </Suspense>
+  );
 }

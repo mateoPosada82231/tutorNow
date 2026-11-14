@@ -8,7 +8,9 @@ import { fetchChats } from '@/features/chat/api/chatApi';
 import type { ChatResumen } from '@/features/chat/types';
 import { Loader2, MessageSquare } from 'lucide-react';
 
-export default function ChatsSplitView() {
+import { Suspense } from 'react';
+
+function ChatsSplitViewContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -166,5 +168,13 @@ export default function ChatsSplitView() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function ChatsSplitView() {
+  return (
+    <Suspense fallback={null}>
+      <ChatsSplitViewContent />
+    </Suspense>
   );
 }
