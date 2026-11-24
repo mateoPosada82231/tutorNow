@@ -1,0 +1,186 @@
+﻿name: Backend CI/CD
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: 'Environment to deploy'
+        type: choice
+        options: [staging, production]
+        required: false
+      rollback:
+        description: 'Rollback to previous version'
+        type: boolean
+        required: false
+        default: false
+
+env:
+  MAVEN_OPTS: "-Dmaven.repo.local=${{ github.workspace }}/.m2/repository"
+  BACKEND_DIR: "backend"
+
+jobs:
+  validate:
+    name: Validate & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('backend/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Build & Unit Tests
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: mvn -B verify --file pom.xml
+
+      # Escaneo informativo: no bloquea el PR si NIST (NVD) limita las descargas.
+      # Para que sea bloqueante, configurar NVD_API_KEY y quitar continue-on-error.
+      - name: Security Scan (OWASP Dependency Check)
+        continue-on-error: true
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'tutornow-backend'
+          path: 'backend'
+          format: 'HTML'
+          out: 'reports'
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: reports/
+          retention-days: 30
+
+  integration-test:
+    name: Integration Tests (Testcontainers)
+    needs: validate
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: tutornow_test
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd="pg_isready -U test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Run Integration Tests
+        working-directory: ${{ env.BACKEND_DIR }}
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/tutornow_test
+          DB_USERNAME: test
+          DB_PASSWORD: test
+          JWT_SECRET: test-secret-do-not-use-in-prod
+          APP_VERIFICATION_BASE_URL: http://localhost:3000/verify-email
+          APP_RESET_BASE_URL: http://localhost:3000/reset-password
+          APP_CHANGE_CONFIRM_BASE_URL: http://localhost:3000/confirm-password-change
+        run: mvn -B verify -Dskip.unit.tests=false
+
+  build-artifact:
+    name: Build JAR
+    needs: [validate, integration-test]
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Package JAR
+        working-directory: ${{ env.BACKEND_DIR }}
+        run: mvn -B package -DskipTests
+
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tutornow-backend-${{ github.sha }}
+          path: backend/target/*.jar
+          retention-days: 30
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-artifact
+    if: github.ref == 'refs/heads/develop' && github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: tutornow-backend-${{ github.sha }}
+          path: artifact
+
+      - name: Deploy to Staging
+        run: |
+          echo "Deploying to Staging..."
+          echo "JAR: $(ls artifact/)"
+          # TODO: Implementar script de deploy real (Render/Fly.io/Railway)
+          # ./scripts/deploy-staging.sh artifact/tutornow-backend-*.jar
+          echo "Deploy script pendiente - configurar en siguiente paso"
+
+  deploy-production:
+    name: Deploy to Production
+    needs: build-artifact
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: tutornow-backend-${{ github.sha }}
+          path: artifact
+
+      - name: Deploy to Production
+        run: |
+          echo "Deploying to Production..."
+          echo "JAR: $(ls artifact/)"
+          # TODO: Implementar script de deploy real (Blue/Green)
+          # ./scripts/deploy-production.sh artifact/tutornow-backend-*.jar
+          echo "Deploy script pendiente - configurar en siguiente paso"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true

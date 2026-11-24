@@ -1,0 +1,39 @@
+# Build output
+target/
+build/
+
+# Build tools
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs y temporales
+*.log
+logs/
+tmp/
+
+# Secretos y entorno local
+.env
+.env.*
+*.pem
+*.key
+
+# Git
+.git/
+.gitignore
+
+# Tests y docs (no necesarios para la imagen)
+src/test/
+docs/
