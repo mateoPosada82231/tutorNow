@@ -265,7 +265,7 @@ Pasos:
 - `capacitor.config.ts` sin `ios.scheme`: se usa el origen por defecto
   `capacitor://localhost`, que el backend permite por CORS. Un scheme propio
   (`App`) produce `App://localhost` y el backend responde `403 Invalid CORS request`.
-- `frontend/ios/App/App/Info.plist` incluye excepciÃ³n ATS (`NSAllowsArbitraryLoads`) para permitir HTTP al backend local en pruebas.
+- `frontend/ios/App/App/Info.plist` ya no incluye la excepción ATS: la API usa HTTPS (`https://api.tutornow.site/api/v1`).
 - Workflow `.github/workflows/ios.yml` (build unsigned + pod install + upload artifact).
 - `.gitignore` excluye `Pods/`, `build/`, `DerivedData/`.
 
@@ -303,8 +303,7 @@ Para que el IPA lo consuma:
    como `App` produce el origen `App://localhost`, que el backend rechaza con
    `403 Invalid CORS request`; en el WebView eso se ve como
    `TypeError: Failed to fetch`, sin status HTTP.
-3. Eliminar el bloque `NSAppTransportSecurity` de `Info.plist` (pendiente: ya no
-   se usa HTTP).
+3. Bloque `NSAppTransportSecurity` eliminado de `Info.plist`: la API usa HTTPS.
 4. Volver a disparar el workflow y reinstalar el IPA (la URL queda bakeada en el build).
 
 ### Cosas a tener en cuenta
