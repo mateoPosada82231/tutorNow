@@ -38,3 +38,9 @@ coverage/
 frontend/ios/App/Pods/
 frontend/ios/App/build/
 frontend/ios/App/DerivedData/
+
+# Android (Capacitor) — signing material must never be committed
+frontend/android/keystore.properties
+frontend/android/app/release.keystore
+**/*.keystore
+**/*.jks

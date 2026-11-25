@@ -47,9 +47,17 @@ Archivo actual: `backend/src/main/resources/application.yml` y `application-dev.
 | Secret | Uso |
 |---|---|
 | `BACKEND_URL` | Workflows Android e iOS (URL del backend) |
-| `ANDROID_KEYSTORE` | Firma release Android (futuro) |
-| `ANDROID_KEYSTORE_PASSWORD` | Firma release Android (futuro) |
-| `PLAY_SERVICE_ACCOUNT_JSON` | Publicación Google Play (futuro) |
+| `ANDROID_KEYSTORE` | Base64 del keystore release Android |
+| `ANDROID_KEYSTORE_PASSWORD` | Contraseña del keystore |
+| `ANDROID_KEY_PASSWORD` | Contraseña del alias de la key |
+| `ANDROID_KEY_ALIAS` | Alias de la key (ej. `tutornow`) |
+| `PLAY_SERVICE_ACCOUNT_JSON` | Publicación Google Play (service account) |
+
+Variable de repositorio (no secret):
+
+| Variable | Uso |
+|---|---|
+| `UPLOAD_TO_PLAY` | `true` para subir el AAB automáticamente a Play Console |
 
 > Nunca commitear `.env`, keystores ni contraseñas.
 
@@ -155,14 +163,29 @@ El export estático **no genera rutas dinámicas**. Por eso las pantallas de det
 - [ ] Instalar en dispositivo (`adb install -r app-debug.apk`).
 - [ ] Probar login, detalle de asesoría, chat, tema y navegación.
 
-### Release (Google Play, futuro)
+### Release (Google Play)
 
-- [ ] Generar keystore y guardarlo fuera del repo.
-- [ ] Configurar secrets de firma.
-- [ ] Ajustar `versionCode` y `versionName`.
-- [ ] Generar AAB (`bundleRelease`).
-- [ ] Subir a Play Console.
+Automatizado con `.github/workflows/android-release.yml` (ejecución manual `workflow_dispatch`).
+
+- [ ] Generar keystore y guardarlo fuera del repo:
+  ```bash
+  keytool -genkey -v -keystore tutornow-release.keystore -alias tutornow \
+    -keyalg RSA -keysize 2048 -validity 10000
+  ```
+- [ ] Convertir el keystore a base64 y cargarlo en el secret `ANDROID_KEYSTORE`:
+  ```powershell
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes("ruta\tutornow-release.keystore")) | Set-Clipboard
+  ```
+- [ ] Configurar `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD` y `ANDROID_KEY_ALIAS`.
+- [ ] Correr el workflow **Android Release (AAB)** con `versionCode` (+1 cada release) y `versionName`.
+- [ ] Descargar el artifact `app-release-aab` (o dejar que suba solo con `UPLOAD_TO_PLAY=true`).
+- [ ] Subirlo a Play Console (Internal testing primero) o dejar que `r0adkll/upload-google-play` lo suba.
+- [ ] Ajustar `versionCode` y `versionName` en cada release (el workflow los recibe como input).
 - [ ] Completar ficha de tienda, política de privacidad y clasificación.
+- [ ] Promover de Internal testing a Production cuando los smoke tests pasen.
+
+> Firma con Play App Signing: Google firma el APK final; tu keystore es el "upload key".
+> Nunca commitear `keystore.properties`, el `.keystore` ni `.jks` (ya están en `.gitignore`).
 
 ---
 
