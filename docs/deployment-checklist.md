@@ -104,17 +104,10 @@ Hoy el envío es **simulado en logs** (`[EMAIL SIMULADO]`). Antes de producción
 
 ### ATS de iOS
 
-Mientras el backend sea HTTP, `frontend/ios/App/App/Info.plist` tiene:
-
-```xml
-<key>NSAppTransportSecurity</key>
-<dict>
-  <key>NSAllowsArbitraryLoads</key>
-  <true/>
-</dict>
-```
-
-**Al pasar a HTTPS hay que eliminar ese bloque.** Apple rechaza apps con esa excepción en App Store.
+El backend ya corre sobre HTTPS (`https://api.tutornow.site/api/v1`), así que
+`frontend/ios/App/App/Info.plist` **no** incluye el bloque `NSAppTransportSecurity`.
+No volver a agregarlo: Apple rechaza apps con `NSAllowsArbitraryLoads` en App Store
+y el WebView solo puede llamar APIs HTTPS.
 
 ### Android
 
@@ -215,7 +208,7 @@ Automatizado con `.github/workflows/android-release.yml` (ejecución manual `wor
 - [ ] `npx cap add ios` ya está hecho; configurar signing en Xcode.
 - [ ] Subir a TestFlight → App Store.
 - [ ] Apple puede rechazar apps que sean solo WebView (guideline 4.2); agregar features nativas.
-- [ ] Eliminar la excepción ATS antes de enviar.
+- [x] Excepción ATS eliminada de `Info.plist` (la API usa HTTPS).
 
 ---
 
@@ -223,12 +216,12 @@ Automatizado con `.github/workflows/android-release.yml` (ejecución manual `wor
 
 Esta es la lista que hay que ejecutar cuando el backend pase a producción:
 
-1. [ ] Desplegar backend con HTTPS.
-2. [ ] Actualizar `BACKEND_URL` en GitHub Secrets al dominio HTTPS.
+1. [x] Desplegar backend con HTTPS (`https://api.tutornow.site/api/v1`, Render).
+2. [x] Actualizar `BACKEND_URL` en GitHub Secrets al dominio HTTPS.
 3. [ ] Actualizar `NEXT_PUBLIC_API_URL` en el hosting web.
-4. [ ] Eliminar `NSAppTransportSecurity` de `frontend/ios/App/App/Info.plist`.
-5. [ ] Revisar `capacitor.config.ts` (Android: `androidScheme`/`cleartext`).
-6. [ ] Agregar el dominio del frontend a CORS en `SecurityConfig.java`.
+4. [x] Eliminar `NSAppTransportSecurity` de `frontend/ios/App/App/Info.plist`.
+5. [ ] Revisar `capacitor.config.ts` (Android: `androidScheme`/`cleartext`; iOS sin `ios.scheme`).
+6. [x] Agregar el dominio del frontend a CORS (`APP_CORS_ORIGINS`); `capacitor://localhost` debe quedar permitido.
 7. [ ] Actualizar `app.verification.base-url`, `app.reset.base-url` y `app.change-confirm.base-url`.
 8. [ ] Rebuild de web, Android e iOS.
 9. [ ] Reinstalar apps y repetir smoke tests.
