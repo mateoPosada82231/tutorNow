@@ -12,15 +12,15 @@ const config: CapacitorConfig = {
     // Using 'http' keeps the WebView origin and the backend on the same scheme.
     androidScheme: 'http',
     cleartext: true,
+    // Keep the default iOS scheme (`capacitor://localhost`). A custom
+    // `ios.scheme` changes the WebView origin (e.g. `App://localhost`), which
+    // the backend CORS allowlist rejects with 403 "Invalid CORS request".
   },
   // Descomentar para desarrollo con hot reload contra el dev server de Next:
   // server: {
   //   url: 'http://10.0.2.2:3000',
   //   cleartext: true,
   // },
-  ios: {
-    scheme: 'App',
-  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,

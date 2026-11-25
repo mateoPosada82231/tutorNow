@@ -262,7 +262,9 @@ Pasos:
 ## 9. Implementado en esta rama (`feature/ios-deploy`)
 
 - `@capacitor/ios` instalado y plataforma generada en `frontend/ios/`.
-- `capacitor.config.ts` actualizado con bloque `ios.scheme = 'App'`.
+- `capacitor.config.ts` sin `ios.scheme`: se usa el origen por defecto
+  `capacitor://localhost`, que el backend permite por CORS. Un scheme propio
+  (`App`) produce `App://localhost` y el backend responde `403 Invalid CORS request`.
 - `frontend/ios/App/App/Info.plist` incluye excepciÃ³n ATS (`NSAllowsArbitraryLoads`) para permitir HTTP al backend local en pruebas.
 - Workflow `.github/workflows/ios.yml` (build unsigned + pod install + upload artifact).
 - `.gitignore` excluye `Pods/`, `build/`, `DerivedData/`.
@@ -288,15 +290,22 @@ Si se agrega una pantalla de detalle nueva, debe seguir el mismo patrÃ³n (pÃ�
 
 La pÃ¡gina `/about` incluye un botÃ³n "Volver" para no quedar atrapado en mobile.
 
-### Proximo sprint - despliegue de backend (HTTPS)
+### Backend desplegado (HTTPS)
 
-Cuando se despliegue el backend, remover la excepciÃ³n ATS y pasar a HTTPS:
+Backend en produccion: `https://api.tutornow.site/api/v1` (Render).
 
-1. Eliminar el bloque `NSAppTransportSecurity` de `Info.plist`.
-2. Cambiar `BACKEND_URL` al dominio HTTPS del backend desplegado.
-3. Si se usa un PaaS (Render/Fly/Railway), el HTTPS viene incluido; no se necesita Certbot/CertKit.
-4. Si se self-hostea en VPS, usar Certbot (Let's Encrypt) con un dominio propio.
-5. Volver a disparar el workflow y reinstalar el IPA (la URL queda bakeada en el build).
+Para que el IPA lo consuma:
+
+1. `BACKEND_URL` en GitHub Secrets debe ser `https://api.tutornow.site/api/v1`.
+2. No configurar `ios.scheme` en `capacitor.config.ts`. El backend solo permite
+   los origenes `capacitor://localhost`, `ionic://localhost`, `http://localhost`
+   y los dominios web (`tutornow.site`, `tutornow.vercel.app`). Un scheme propio
+   como `App` produce el origen `App://localhost`, que el backend rechaza con
+   `403 Invalid CORS request`; en el WebView eso se ve como
+   `TypeError: Failed to fetch`, sin status HTTP.
+3. Eliminar el bloque `NSAppTransportSecurity` de `Info.plist` (pendiente: ya no
+   se usa HTTP).
+4. Volver a disparar el workflow y reinstalar el IPA (la URL queda bakeada en el build).
 
 ### Cosas a tener en cuenta
 
